@@ -33,6 +33,7 @@ type api struct {
 }
 
 func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveConnection, activeClients *clientList, clientReceived *lockList, readMu *sync.Mutex, messages *chan []byte) {
+	a.messageSockets = &[]*websocket.Conn{}
 	a.config = config
 	a.readMu = readMu
 	a.keys = keys
