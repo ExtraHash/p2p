@@ -184,7 +184,6 @@ func (client *client) parse(msg []byte) {
 }
 
 func (client *client) emit(data []byte) {
-	log.Debug("sending", data)
 	*client.messages <- data
 }
 
