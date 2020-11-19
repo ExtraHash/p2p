@@ -30,10 +30,12 @@ type client struct {
 	readMu        *sync.Mutex
 	db            db
 	config        NetworkConfig
+	messages      *chan []byte
 }
 
-func (client *client) initialize(config NetworkConfig, peer Peer, keys keys, api *api, activeClients *clientList, received *lockList, db db, readMu *sync.Mutex) {
+func (client *client) initialize(config NetworkConfig, peer Peer, keys keys, api *api, activeClients *clientList, received *lockList, db db, readMu *sync.Mutex, messages *chan []byte) {
 	client.connecting = true
+	client.messages = messages
 	client.readMu = readMu
 	client.config = config
 	client.authorized = false
@@ -171,6 +173,7 @@ func (client *client) parse(msg []byte) {
 		if !client.received.contains([]byte(broadcast.MessageID)) {
 			client.received.push([]byte(broadcast.MessageID))
 			log.Info(colors.boldMagenta+"CAST"+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
+			*client.messages <- unsealed
 			client.propagate(unsealed, broadcast.MessageID)
 		} else {
 			if client.config.LogLevel > 1 {

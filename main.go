@@ -21,6 +21,7 @@ type DP2P struct {
 	selfPeer          Peer
 	config            NetworkConfig
 	readMu            sync.Mutex
+	Messages          chan []byte
 }
 
 // NetworkConfig is the configuration for the p2p network.
@@ -33,6 +34,8 @@ type NetworkConfig struct {
 
 // Initialize the peer to peer network connection.
 func (d *DP2P) Initialize(config NetworkConfig) {
+	d.Messages = make(chan []byte)
+
 	d.config = config
 
 	_, err := uuid.FromString(config.NetworkID)
@@ -56,7 +59,7 @@ func (d *DP2P) Initialize(config NetworkConfig) {
 		SealKey: hex.EncodeToString(d.keys.sealKeys.Pub[:]),
 	}
 
-	d.api.initialize(d.config, d.keys, d.db, &d.activeConnections, &d.consumerList, &d.clientReceived, &d.readMu)
+	d.api.initialize(d.config, d.keys, d.db, &d.activeConnections, &d.consumerList, &d.clientReceived, &d.readMu, &d.Messages)
 
 	go d.postAPISetup()
 	d.api.run()
@@ -70,6 +73,6 @@ func (d *DP2P) Broadcast(message []byte) uuid.UUID {
 }
 
 func (d *DP2P) postAPISetup() {
-	go d.selfClient.initialize(d.config, d.selfPeer, d.keys, &d.api, &d.consumerList, &d.clientReceived, d.db, &d.readMu)
-	go d.consumerList.initialize(d.config, 1000, d.db, &d.api, d.keys, &d.clientReceived, &d.readMu)
+	go d.selfClient.initialize(d.config, d.selfPeer, d.keys, &d.api, &d.consumerList, &d.clientReceived, d.db, &d.readMu, &d.Messages)
+	go d.consumerList.initialize(d.config, 1000, d.db, &d.api, d.keys, &d.clientReceived, &d.readMu, &d.Messages)
 }

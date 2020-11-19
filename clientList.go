@@ -25,15 +25,17 @@ type clientList struct {
 	readMu    *sync.Mutex
 	peerList  peerList
 	config    NetworkConfig
+	messages  *chan []byte
 }
 
-func (l *clientList) initialize(config NetworkConfig, maxLength int, db db, api *api, keys keys, received *lockList, readMu *sync.Mutex) {
+func (l *clientList) initialize(config NetworkConfig, maxLength int, db db, api *api, keys keys, received *lockList, readMu *sync.Mutex, messages *chan []byte) {
 	l.db = db
 	l.api = api
 	l.keys = keys
 	l.received = received
 	l.readMu = readMu
 	l.config = config
+	l.messages = messages
 
 	l.setMaxLength(maxLength)
 	l.peerList.list = db.getPeerList()
@@ -46,7 +48,7 @@ func (l *clientList) createConsumer(peer Peer) {
 	multiplier := math.Pow(2, float64(peer.FailCount))
 	time.Sleep(time.Second*time.Duration(multiplier) - time.Second)
 	newClient := client{}
-	go newClient.initialize(l.config, peer, l.keys, l.api, l, l.received, l.db, l.readMu)
+	go newClient.initialize(l.config, peer, l.keys, l.api, l, l.received, l.db, l.readMu, l.messages)
 }
 
 func (l *clientList) connect() {

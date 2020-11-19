@@ -28,9 +28,10 @@ type api struct {
 	peerListMu     *sync.Mutex
 	config         NetworkConfig
 	readMu         *sync.Mutex
+	messages       *chan []byte
 }
 
-func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveConnection, activeClients *clientList, clientReceived *lockList, readMu *sync.Mutex) {
+func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveConnection, activeClients *clientList, clientReceived *lockList, readMu *sync.Mutex, messages *chan []byte) {
 	a.config = config
 	a.readMu = readMu
 	a.keys = keys
@@ -38,6 +39,7 @@ func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveCo
 	a.ac = ac
 	a.activeClients = activeClients
 	a.clientReceived = clientReceived
+	a.messages = messages
 	a.getRouter()
 }
 
@@ -231,7 +233,7 @@ func (a *api) SocketHandler() http.Handler {
 						if backIP != "127.0.0.1" {
 							log.Info("Probing peer " + backIP)
 							backPeer := Peer{Host: backIP, Port: response.Port}
-							go backClient.initialize(a.config, backPeer, a.keys, a, a.activeClients, a.clientReceived, a.db, a.readMu)
+							go backClient.initialize(a.config, backPeer, a.keys, a, a.activeClients, a.clientReceived, a.db, a.readMu, a.messages)
 						}
 					}
 				} else {
