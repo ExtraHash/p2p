@@ -174,6 +174,9 @@ func (client *client) parse(msg []byte) {
 			client.received.push([]byte(broadcast.MessageID))
 			log.Info(colors.boldMagenta+"CAST"+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
 			go client.emit(unsealed)
+			for _, socket := range client.api.messageSockets {
+				socket.WriteMessage(websocket.BinaryMessage, unsealed)
+			}
 			client.propagate(unsealed, broadcast.MessageID)
 		} else {
 			if client.config.LogLevel > 1 {

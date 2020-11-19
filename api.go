@@ -29,6 +29,7 @@ type api struct {
 	config         NetworkConfig
 	readMu         *sync.Mutex
 	messages       *chan []byte
+	messageSockets []*websocket.Conn
 }
 
 func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveConnection, activeClients *clientList, clientReceived *lockList, readMu *sync.Mutex, messages *chan []byte) {
@@ -59,6 +60,7 @@ func (a *api) getRouter() {
 	a.router.Handle("/info", a.InfoHandler()).Methods("GET")
 	a.router.Handle("/peers", a.PeerHandler()).Methods("GET", "POST")
 	a.router.Handle("/socket", a.SocketHandler()).Methods("GET")
+	a.router.Handle("/messages", a.MessageHandler()).Methods("GET")
 }
 
 // PeerHandler handles the status endpoint.
@@ -136,6 +138,28 @@ func (a *api) connectedTo(signKey string) bool {
 		}
 	}
 	return false
+}
+
+// MessageHandler is the public socket that emits new messages.
+func (a *api) MessageHandler() http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		log.Info(colors.boldYellow+"HTTP"+colors.reset, req.Method, req.URL, GetIP(req))
+
+		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		}
+
+		upgrader.CheckOrigin = func(req *http.Request) bool { return true }
+
+		conn, err := upgrader.Upgrade(res, req, nil)
+		if err != nil {
+			log.Warning(err)
+			return
+		}
+
+		a.messageSockets = append(a.messageSockets, conn)
+	})
 }
 
 // SocketHandler handles the websocket connection messages and responses.
