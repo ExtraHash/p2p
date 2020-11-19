@@ -173,7 +173,7 @@ func (client *client) parse(msg []byte) {
 		if !client.received.contains([]byte(broadcast.MessageID)) {
 			client.received.push([]byte(broadcast.MessageID))
 			log.Info(colors.boldMagenta+"CAST"+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
-			*client.messages <- unsealed
+			go client.emit(unsealed)
 			client.propagate(unsealed, broadcast.MessageID)
 		} else {
 			if client.config.LogLevel > 1 {
@@ -181,6 +181,10 @@ func (client *client) parse(msg []byte) {
 			}
 		}
 	}
+}
+
+func (client *client) emit(data []byte) {
+	*client.messages <- data
 }
 
 func (client *client) propagate(msg []byte, messageID string) {
