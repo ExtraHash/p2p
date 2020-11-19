@@ -50,7 +50,7 @@ func (d *DP2P) Initialize(config NetworkConfig) {
 	d.serverReceived.setMaxLength(1000)
 	d.activeConnections = []*ActiveConnection{}
 
-	LoggerConfig()
+	LoggerConfig(config)
 	d.keys.initialize(config)
 	d.db.initialize(config)
 
