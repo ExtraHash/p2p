@@ -3,6 +3,7 @@ package p2p
 import (
 	"encoding/hex"
 	"sync"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -76,6 +77,10 @@ func (d *DP2P) Broadcast(message []byte) uuid.UUID {
 // ReadMessage will get the next broadcasted message on the network. It blocks
 // until the message is ready to be read.
 func (d *DP2P) ReadMessage() []byte {
+	for d.messages == nil {
+		time.Sleep(100 * time.Millisecond)
+
+	}
 	return <-*d.messages
 }
 
