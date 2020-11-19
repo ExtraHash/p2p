@@ -29,7 +29,7 @@ type api struct {
 	config         NetworkConfig
 	readMu         *sync.Mutex
 	messages       *chan []byte
-	messageSockets []*websocket.Conn
+	messageSockets *[]*websocket.Conn
 }
 
 func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveConnection, activeClients *clientList, clientReceived *lockList, readMu *sync.Mutex, messages *chan []byte) {
@@ -158,7 +158,7 @@ func (a *api) MessageHandler() http.Handler {
 			return
 		}
 
-		a.messageSockets = append(a.messageSockets, conn)
+		*a.messageSockets = append(*a.messageSockets, conn)
 	})
 }
 
