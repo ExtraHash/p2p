@@ -54,12 +54,11 @@ func LoggerConfig(config NetworkConfig) {
 	format := logging.MustStringFormatter(
 		`%{color}%{time:15:04:05.000} › %{color:reset}%{message}`,
 	)
-	if config.LogLevel == 0 {
-		format = logging.MustStringFormatter(
-			``,
-		)
+	backend := logging.NewLogBackend(os.Stdin, "", 0)
+	if config.LogLevel < 1 {
+		backend = logging.NewLogBackend(ioutil.Discard, "", 0)
 	}
-	backend := logging.NewLogBackend(os.Stderr, "", 0)
+
 	backendFormatter := logging.NewBackendFormatter(backend, format)
 	logging.SetBackend(backendFormatter)
 }
