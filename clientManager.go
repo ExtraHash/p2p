@@ -19,6 +19,7 @@ type clientManager struct {
 
 	clientMu       sync.Mutex
 	clients        []*client
+	selfClient     *client
 	clientReceived lockList
 	readMu         sync.Mutex
 }
@@ -41,11 +42,11 @@ func (cm *clientManager) initSelfClient() {
 	}
 	selfClient := client{}
 	selfClient.initialize(cm.core, &selfPeer, &cm.clientReceived, &cm.readMu)
-	cm.addToCoClientList(&selfClient)
+	cm.selfClient = &selfClient
 }
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
-	for _, consumer := range cm.clients {
+	for _, consumer := range append(cm.clients, cm.selfClient) {
 		byteKey, err := hex.DecodeString(consumer.serverInfo.PubSealKey)
 		if err != nil {
 			log.Error(err)

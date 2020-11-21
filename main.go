@@ -11,8 +11,7 @@ type DP2P struct {
 	core core
 
 	// don't get passed anywhere
-	api           api
-	clientManager clientManager
+	api api
 }
 
 type core struct {
@@ -57,7 +56,7 @@ func (d *DP2P) Initialize(config NetworkConfig) {
 // Broadcast a message on the network. Returns the created message's ID.
 func (d *DP2P) Broadcast(message []byte) uuid.UUID {
 	mID := uuid.NewV4()
-	d.clientManager.propagate(message, mID.String())
+	d.core.clientManager.propagate(message, mID.String())
 	return mID
 }
 
@@ -72,5 +71,5 @@ func (d *DP2P) ReadMessage() []byte {
 
 func (d *DP2P) postAPISetup() {
 	time.Sleep(2 * time.Second)
-	d.clientManager.initialize(&d.core)
+	d.core.clientManager.initialize(&d.core)
 }
