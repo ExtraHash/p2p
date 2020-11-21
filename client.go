@@ -152,7 +152,9 @@ func (client *client) decrypt(msg string, nonce string, theirKey string) ([]byte
 }
 
 func (client *client) fail() {
-	client.conn.Close()
+	if client.conn != nil {
+		client.conn.Close()
+	}
 	client.failed = true
 }
 
