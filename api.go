@@ -261,6 +261,9 @@ func (a *api) SocketHandler() http.Handler {
 
 func (a *api) emitBroadcast(message []byte, messageID string) {
 	for _, ac := range a.ac {
+		if ac.conn == nil {
+			continue
+		}
 		if ac.authed {
 			nonce := makeNonce()
 			secret := box.Seal(nil, message, nonce.bytes, keySliceConvert(ac.sealKey), &a.core.keys.sealKeys.Priv)
