@@ -127,7 +127,7 @@ func (client *client) listen() {
 			} else {
 				dbEntry.SealKey = client.serverInfo.PubSealKey
 				dbEntry.LastSeen = time.Now()
-				client.core.db.db.Model(&Peer{}).Updates(Peer{SealKey: client.serverInfo.PubSealKey, LastSeen: time.Now()})
+				client.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: client.serverInfo.PubSealKey, LastSeen: time.Now()})
 			}
 		case "broadcast":
 			client.parse(rawMessage)
