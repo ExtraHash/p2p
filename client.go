@@ -112,7 +112,7 @@ func (client *client) listen() {
 		case "authorized":
 			client.authorized = true
 			client.connecting = false
-			log.Info(colors.boldGreen+"AUTH"+colors.reset, client.peer.Host)
+			log.Info(colors.boldGreen+"AUTH"+colors.reset, "logged in to "+client.peer.toString(false))
 			// client.peer.LastSeen = time.Now()
 			// client.core.db.db.Save(client.peer)
 		case "broadcast":
