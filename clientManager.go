@@ -115,7 +115,7 @@ func (cm *clientManager) takePeers() {
 		log.Debug("Currently have " + strconv.Itoa(len(cm.clients)) + " on client list.")
 		if len(cm.clients) < 8 {
 			peer := Peer{}
-			cm.core.db.db.Take(&peer)
+			cm.core.db.db.Raw("SELECT * FROM peers ORDER BY RANDOM() LIMIT 1;").Scan(&peer)
 			log.Debug("Took peer " + peer.toString(false))
 			if !cm.inClientList(peer) {
 				log.Debug("Not in list, attempting to dial " + peer.toString(false))
