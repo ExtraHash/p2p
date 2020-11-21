@@ -30,7 +30,7 @@ func (cm *clientManager) initialize(core *core) {
 
 	go cm.takePeers()
 	go cm.findPeers()
-	cm.pruneList()
+	go cm.pruneList()
 }
 
 func (cm *clientManager) initSelfClient() {
@@ -96,7 +96,6 @@ func (cm *clientManager) findPeers() {
 				log.Debug("Checking if peer is new: " + newPeer.toString(false) + " " + newPeer.SignKey)
 				checkPeer := Peer{}
 				cm.core.db.db.Find(&checkPeer, "sign_key = ?", newPeer.SignKey)
-				log.Debug(checkPeer)
 				if checkPeer == (Peer{}) {
 					log.Debug("New peer found: " + newPeer.toString(false))
 					cm.core.db.db.Create(&newPeer)
@@ -129,11 +128,12 @@ func (cm *clientManager) takePeers() {
 func (cm *clientManager) pruneList() {
 
 	for {
-		cm.clientMu.Lock()
 		finished := false
 		for {
+			cm.clientMu.Lock()
 			for i, c := range cm.clients {
 				if c.failed {
+					log.Debug("Removing from peer list: " + c.peer.toString(false))
 					cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
 					break
 				}
@@ -142,10 +142,10 @@ func (cm *clientManager) pruneList() {
 				}
 			}
 			if finished {
+				cm.clientMu.Unlock()
 				break
 			}
 		}
-		cm.clientMu.Unlock()
 		time.Sleep(5 * time.Second)
 	}
 
