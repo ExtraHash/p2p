@@ -95,7 +95,8 @@ func (cm *clientManager) findPeers() {
 			for _, newPeer := range newList {
 				log.Debug("Checking if peer is new: " + newPeer.toString(false) + " " + newPeer.SignKey)
 				checkPeer := Peer{}
-				cm.core.db.db.Find(&checkPeer, "sign_key = ?", peer.SignKey)
+				cm.core.db.db.Find(&checkPeer, "sign_key = ?", newPeer.SignKey)
+				log.Debug(checkPeer)
 				if checkPeer == (Peer{}) {
 					log.Debug("New peer found: " + newPeer.toString(false))
 					cm.core.db.db.Create(&newPeer)
