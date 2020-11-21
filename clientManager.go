@@ -72,6 +72,7 @@ func (cm *clientManager) findPeers() {
 	for {
 		peerList := cm.core.db.getPeerList()
 		for _, peer := range peerList {
+			log.Debug("Requesting peerlist from " + peer.toString(false))
 			peerURL := url.URL{Scheme: "http", Host: peer.toString(false), Path: "/peers"}
 
 			res, err := http.Get(peerURL.String())
@@ -94,6 +95,7 @@ func (cm *clientManager) findPeers() {
 				checkPeer := Peer{}
 				cm.core.db.db.Find(&checkPeer, "sign_key = ?", peer.SignKey)
 				if checkPeer == (Peer{}) {
+					log.Debug("New peer found: " + newPeer.toString(false))
 					cm.core.db.db.Create(&newPeer)
 				}
 			}
