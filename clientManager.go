@@ -120,9 +120,9 @@ func (cm *clientManager) takePeers() {
 }
 
 func (cm *clientManager) pruneList() {
-	cm.clientMu.Lock()
-	defer cm.clientMu.Unlock()
+
 	for {
+		cm.clientMu.Lock()
 		finished := false
 		for {
 			for i, c := range cm.clients {
@@ -138,6 +138,7 @@ func (cm *clientManager) pruneList() {
 				break
 			}
 		}
+		cm.clientMu.Unlock()
 		time.Sleep(5 * time.Second)
 	}
 
