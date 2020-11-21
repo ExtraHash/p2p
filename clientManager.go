@@ -108,6 +108,7 @@ func (cm *clientManager) takePeers() {
 		if len(cm.clients) < 8 {
 			peer := Peer{}
 			cm.core.db.db.Take(&peer)
+			log.Debug("Took peer " + peer.toString(false))
 			if !cm.inClientList(peer) {
 				c := client{}
 				c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
