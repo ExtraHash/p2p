@@ -131,26 +131,16 @@ func (cm *clientManager) takePeers() {
 }
 
 func (cm *clientManager) pruneList() {
-
 	for {
-		finished := false
-		for {
-			cm.clientMu.Lock()
-			for i, c := range cm.clients {
-				if c.failed {
-					log.Debug("Removing from peer list: " + c.peer.toString(false))
-					cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
-					break
-				}
-				if i == len(cm.clients)-1 {
-					finished = true
-				}
-			}
-			if finished {
-				cm.clientMu.Unlock()
+		cm.clientMu.Lock()
+		for i, c := range cm.clients {
+			if c.failed {
+				log.Debug("Removing from peer list: " + c.peer.toString(false))
+				cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
 				break
 			}
 		}
+		cm.clientMu.Unlock()
 		time.Sleep(5 * time.Second)
 	}
 
