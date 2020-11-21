@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -19,8 +20,10 @@ import (
 type api struct {
 	core *core
 
-	router         *mux.Router
-	ac             []*ActiveConnection
+	router *mux.Router
+	ac     []*ActiveConnection
+	acMu   sync.Mutex
+
 	serverReceived lockList
 }
 
@@ -141,7 +144,9 @@ func (a *api) SocketHandler() http.Handler {
 			vID:    uuid.NewV4(),
 		}
 
+		a.acMu.Lock()
 		a.ac = append(a.ac, &ac)
+		a.acMu.Unlock()
 
 		log.Info(colors.boldYellow+"HTTP"+colors.reset, "UPGRADED", GetIP(req))
 
@@ -154,7 +159,7 @@ func (a *api) SocketHandler() http.Handler {
 			if err != nil {
 				log.Error(err)
 				conn.Close()
-				ac.prune(a.ac)
+				a.removeConnection(&ac)
 				break
 			}
 
@@ -176,7 +181,7 @@ func (a *api) SocketHandler() http.Handler {
 					log.Warning(response.NetworkID, a.core.config.NetworkID)
 					log.Warning("Peer has incorrect network ID. Terminating connection.")
 					conn.Close()
-					ac.prune(a.ac)
+					a.removeConnection(&ac)
 				}
 
 				peerSignKey, err := hex.DecodeString(response.SignKey)
@@ -278,6 +283,19 @@ func (a *api) SocketHandler() http.Handler {
 
 		}
 	})
+}
+
+func (a *api) removeConnection(connection *ActiveConnection) {
+	a.acMu.Lock()
+	defer a.acMu.Unlock()
+	for i, c := range a.ac {
+		if c == connection {
+			a.ac[i] = a.ac[len(a.ac)-1] // Copy last element to index i.
+			a.ac[len(a.ac)-1] = nil     // Erase last element (write zero value).
+			a.ac = a.ac[:len(a.ac)-1]
+			break
+		}
+	}
 }
 
 func (a *api) emitBroadcast(message []byte, messageID string) {

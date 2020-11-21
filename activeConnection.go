@@ -22,18 +22,6 @@ type ActiveConnection struct {
 	mu      sync.Mutex
 }
 
-func (ac *ActiveConnection) prune(cList []*ActiveConnection) {
-	for i, c := range cList {
-		if c == ac {
-			c.conn.Close()
-			cList[i] = cList[len(cList)-1] // Copy last element to index i.
-			cList[len(cList)-1] = nil      // Erase last element (write zero value).
-			cList = cList[:len(cList)-1]
-			break
-		}
-	}
-}
-
 func (ac *ActiveConnection) send(msg []byte) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
