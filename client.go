@@ -114,20 +114,22 @@ func (client *client) listen() {
 			client.connecting = false
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, "Logged in to "+client.peer.toString(false))
 
-			dbEntry := Peer{}
-			client.core.db.db.Find(&dbEntry, "sign_key = ?", client.peer.SignKey)
-			if dbEntry == (Peer{}) {
-				client.core.db.db.Create(&Peer{
-					Host:     client.peer.Host,
-					Port:     client.peer.Port,
-					SignKey:  client.serverInfo.PubSignKey,
-					SealKey:  client.serverInfo.PubSealKey,
-					LastSeen: time.Now(),
-				})
-			} else {
-				dbEntry.SealKey = client.serverInfo.PubSealKey
-				dbEntry.LastSeen = time.Now()
-				client.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: client.serverInfo.PubSealKey, LastSeen: time.Now()})
+			if client.peer.Host != "127.0.0.1" {
+				dbEntry := Peer{}
+				client.core.db.db.Find(&dbEntry, "sign_key = ?", client.peer.SignKey)
+				if dbEntry == (Peer{}) {
+					client.core.db.db.Create(&Peer{
+						Host:     client.peer.Host,
+						Port:     client.peer.Port,
+						SignKey:  client.serverInfo.PubSignKey,
+						SealKey:  client.serverInfo.PubSealKey,
+						LastSeen: time.Now(),
+					})
+				} else {
+					dbEntry.SealKey = client.serverInfo.PubSealKey
+					dbEntry.LastSeen = time.Now()
+					client.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: client.serverInfo.PubSealKey, LastSeen: time.Now()})
+				}
 			}
 		case "broadcast":
 			client.parse(rawMessage)
