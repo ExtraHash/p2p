@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
@@ -32,6 +31,27 @@ func (cm *clientManager) initialize(core *core) {
 	go cm.takePeers()
 	go cm.findPeers()
 	go cm.pruneList()
+	go cm.logging()
+}
+
+func (cm *clientManager) logging() {
+	for {
+		time.Sleep(15 * time.Second)
+		log.Debug("Current peers:")
+		for _, client := range cm.clients {
+			log.Debugf(client.toString() + " ")
+			if client.failed {
+				log.Debugf(colors.boldRed + "FAILED " + colors.reset)
+			}
+			if client.authorized {
+				log.Debugf(colors.boldGreen + "AUTHORIZED " + colors.reset)
+			}
+			if client.connecting {
+				log.Debugf(colors.boldGreen + "CONNECTING " + colors.reset)
+			}
+			log.Debugf("\n")
+		}
+	}
 }
 
 func (cm *clientManager) initSelfClient() {
@@ -74,34 +94,27 @@ func (cm *clientManager) findPeers() {
 	for {
 		peerList := cm.core.db.getPeerList()
 		for _, peer := range peerList {
-			log.Debug("Requesting peerlist from " + peer.toString(false))
 			peerURL := url.URL{Scheme: "http", Host: peer.toString(false), Path: "/peers"}
 
 			res, err := http.Get(peerURL.String())
 			if err != nil {
-				log.Debug("Peer unavailable." + peer.toString(false))
-				log.Error(err)
 				continue
 			}
 
 			peerBody, err := ioutil.ReadAll(res.Body)
 			if err != nil {
-				log.Error(err)
-				return
+				continue
 			}
 
 			newList := []Peer{}
 			json.Unmarshal(peerBody, &newList)
 
 			for _, newPeer := range newList {
-				log.Debug("Checking if peer is new: " + newPeer.toString(false) + " " + newPeer.SignKey)
 				checkPeer := Peer{}
 				cm.core.db.db.Find(&checkPeer, "sign_key = ?", newPeer.SignKey)
 				if checkPeer == (Peer{}) {
-					log.Debug("New peer found: " + newPeer.toString(false))
 					cm.core.db.db.Create(&newPeer)
-				} else {
-					log.Debug("Peer is not new: " + newPeer.toString(false))
+					log.Debug("Discovered peer: " + newPeer.toString(false))
 				}
 			}
 		}
@@ -112,18 +125,13 @@ func (cm *clientManager) findPeers() {
 
 func (cm *clientManager) takePeers() {
 	for {
-		log.Debug("Currently have " + strconv.Itoa(len(cm.clients)) + " on client list.")
 		if len(cm.clients) < 8 {
 			peer := Peer{}
 			cm.core.db.db.Raw("SELECT * FROM peers ORDER BY RANDOM() LIMIT 1;").Scan(&peer)
-			log.Debug("Took peer " + peer.toString(false))
 			if !cm.inClientList(peer) {
-				log.Debug("Not in list, attempting to dial " + peer.toString(false))
 				c := client{}
 				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
 				cm.addToCoClientList(&c)
-			} else {
-				log.Debug("Didn't add because already in list: " + peer.toString(false))
 			}
 		}
 		time.Sleep(5 * time.Second)
@@ -135,7 +143,6 @@ func (cm *clientManager) pruneList() {
 		cm.clientMu.Lock()
 		for i, c := range cm.clients {
 			if c.failed {
-				log.Debug("Removing from peer list: " + c.peer.toString(false))
 				cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
 				break
 			}

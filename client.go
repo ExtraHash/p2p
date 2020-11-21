@@ -156,6 +156,8 @@ func (client *client) fail() {
 		client.conn.Close()
 	}
 	client.failed = true
+	client.connecting = false
+	client.authorized = false
 }
 
 func (client *client) parse(msg []byte) {
