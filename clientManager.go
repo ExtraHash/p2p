@@ -93,7 +93,7 @@ func (cm *clientManager) findPeers() {
 			json.Unmarshal(peerBody, &newList)
 
 			for _, newPeer := range newList {
-				log.Debug("Checking if peer is new: " + newPeer.toString(false))
+				log.Debug("Checking if peer is new: " + newPeer.toString(false) + " " + newPeer.SignKey)
 				checkPeer := Peer{}
 				cm.core.db.db.Find(&checkPeer, "sign_key = ?", peer.SignKey)
 				if checkPeer == (Peer{}) {
