@@ -36,7 +36,7 @@ func (cm *clientManager) initialize(core *core) {
 
 func (cm *clientManager) logging() {
 	for {
-		time.Sleep(15 * time.Second)
+		time.Sleep(2 * time.Minute)
 		log.Debug("║ Current peers:")
 		for _, client := range cm.clients {
 			log.Debug("║ " + client.toString())

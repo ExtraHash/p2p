@@ -53,14 +53,12 @@ func (client *client) handshake() {
 
 	iRes, err := http.Get(infoURL.String())
 	if err != nil {
-		log.Error(err)
 		client.fail()
 		return
 	}
 
 	infoBody, err := ioutil.ReadAll(iRes.Body)
 	if err != nil {
-		log.Error(err)
 		client.fail()
 		return
 	}
@@ -74,7 +72,6 @@ func (client *client) handshake() {
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Error("dial:", err)
 		client.fail()
 		return
 	}
@@ -90,7 +87,6 @@ func (client *client) listen() {
 	for {
 		_, rawMessage, err := client.conn.ReadMessage()
 		if err != nil {
-			log.Info("err:", err)
 			client.fail()
 			return
 		}
@@ -101,7 +97,6 @@ func (client *client) listen() {
 		msg := message{}
 		err = msgpack.Unmarshal(rawMessage, &msg)
 		if err != nil {
-			log.Error(err)
 			client.fail()
 			return
 		}
@@ -131,13 +126,11 @@ func (client *client) listen() {
 func (client *client) decrypt(msg string, nonce string, theirKey string) ([]byte, bool) {
 	bMes, err := hex.DecodeString(msg)
 	if err != nil {
-		log.Warning("Decoding message hex failed from " + client.toString())
 		client.fail()
 	}
 
 	bNonce, err := hex.DecodeString(nonce)
 	if err != nil {
-		log.Warning("Parsing nonce hex failed from " + client.toString())
 		client.fail()
 	}
 
