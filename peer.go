@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -12,13 +13,14 @@ import (
 // Peer is a single peer on the network
 type Peer struct {
 	apiModel
-	Host       string `json:"host"`
-	Port       int    `json:"port"`
-	SignKey    string `json:"signKey" gorm:"unique"`
-	SealKey    string `json:"-" gorm:"-"`
-	Connected  bool   `json:"-" gorm:"-"`
-	Connecting bool   `json:"-" gorm:"-"`
-	FailCount  int    `json:"-" gorm:"-"`
+	Host       string    `json:"host"`
+	Port       int       `json:"port"`
+	SignKey    string    `json:"signKey" gorm:"unique"`
+	LastSeen   time.Time `json:"lastSeen"`
+	SealKey    string    `json:"-" gorm:"-"`
+	Connected  bool      `json:"-" gorm:"-"`
+	Connecting bool      `json:"-" gorm:"-"`
+	FailCount  int       `json:"-" gorm:"-"`
 }
 
 func (p *Peer) verify(vID uuid.UUID) verifyRes {

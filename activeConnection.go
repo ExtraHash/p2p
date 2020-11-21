@@ -22,18 +22,16 @@ type ActiveConnection struct {
 	mu      sync.Mutex
 }
 
-func (ac *ActiveConnection) prune(cList *[]*ActiveConnection) {
-	currentList := *cList
-	for i, c := range currentList {
+func (ac *ActiveConnection) prune(cList []*ActiveConnection) {
+	for i, c := range cList {
 		if c == ac {
 			c.conn.Close()
-			currentList[i] = currentList[len(currentList)-1] // Copy last element to index i.
-			currentList[len(currentList)-1] = nil            // Erase last element (write zero value).
-			currentList = currentList[:len(currentList)-1]
+			cList[i] = cList[len(cList)-1] // Copy last element to index i.
+			cList[len(cList)-1] = nil      // Erase last element (write zero value).
+			cList = cList[:len(cList)-1]
 			break
 		}
 	}
-	*cList = currentList
 }
 
 func (ac *ActiveConnection) send(msg []byte) {

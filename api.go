@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"sync"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -17,38 +16,23 @@ import (
 )
 
 type api struct {
+	core *core
+
 	router         *mux.Router
-	keys           keys
-	db             db
-	ac             *[]*ActiveConnection
+	ac             []*ActiveConnection
 	serverReceived lockList
-	clientReceived *lockList
-	activeClients  *clientList
-	peerList       *[]Peer
-	peerListMu     *sync.Mutex
-	config         NetworkConfig
-	readMu         *sync.Mutex
-	messages       *chan []byte
-	messageSockets *[]*websocket.Conn
 }
 
-func (a *api) initialize(config NetworkConfig, keys keys, db db, ac *[]*ActiveConnection, activeClients *clientList, clientReceived *lockList, readMu *sync.Mutex, messages *chan []byte) {
-	a.messageSockets = &[]*websocket.Conn{}
-	a.config = config
-	a.readMu = readMu
-	a.keys = keys
-	a.db = db
-	a.ac = ac
-	a.activeClients = activeClients
-	a.clientReceived = clientReceived
-	a.messages = messages
+func (a *api) initialize(core *core) {
+	a.core = core
+	a.ac = []*ActiveConnection{}
 	a.getRouter()
 }
 
 // Run starts the server.
 func (a *api) run() {
-	log.Info(colors.boldYellow+"HTTP"+colors.reset, "Starting API on port "+strconv.Itoa(a.config.Port)+".")
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(a.config.Port),
+	log.Info(colors.boldYellow+"HTTP"+colors.reset, "Starting API on port "+strconv.Itoa(a.core.config.Port)+".")
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(a.core.config.Port),
 		handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS", "PATCH"}),
 			handlers.AllowedOrigins([]string{"*"}))(a.router)))
@@ -61,7 +45,6 @@ func (a *api) getRouter() {
 	a.router.Handle("/info", a.InfoHandler()).Methods("GET")
 	a.router.Handle("/peers", a.PeerHandler()).Methods("GET", "POST")
 	a.router.Handle("/socket", a.SocketHandler()).Methods("GET")
-	a.router.Handle("/messages", a.MessageHandler()).Methods("GET")
 }
 
 // PeerHandler handles the status endpoint.
@@ -71,8 +54,7 @@ func (a *api) PeerHandler() http.Handler {
 
 		switch req.Method {
 		case "GET":
-			peerList := a.db.getPeerList()
-
+			peerList := a.core.db.getPeerList()
 			byteRes, err := json.Marshal(peerList)
 			if err != nil {
 				res.WriteHeader(http.StatusInternalServerError)
@@ -92,8 +74,8 @@ func (a *api) InfoHandler() http.Handler {
 		log.Info(colors.boldYellow+"HTTP"+colors.reset, req.Method, req.URL, GetIP(req))
 
 		infoRes := infoRes{
-			PubSignKey: hex.EncodeToString(a.keys.signKeys.Pub),
-			PubSealKey: hex.EncodeToString(a.keys.sealKeys.Pub[:]),
+			PubSignKey: hex.EncodeToString(a.core.keys.signKeys.Pub),
+			PubSealKey: hex.EncodeToString(a.core.keys.sealKeys.Pub[:]),
 			Version:    version,
 		}
 
@@ -132,37 +114,6 @@ func (a *api) HomeHandler() http.Handler {
 	})
 }
 
-func (a *api) connectedTo(signKey string) bool {
-	for _, client := range a.activeClients.consumers {
-		if client.serverInfo.PubSignKey == signKey {
-			return true
-		}
-	}
-	return false
-}
-
-// MessageHandler is the public socket that emits new messages.
-func (a *api) MessageHandler() http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		log.Info(colors.boldYellow+"HTTP"+colors.reset, req.Method, req.URL, GetIP(req))
-
-		var upgrader = websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
-		}
-
-		upgrader.CheckOrigin = func(req *http.Request) bool { return true }
-
-		conn, err := upgrader.Upgrade(res, req, nil)
-		if err != nil {
-			log.Warning(err)
-			return
-		}
-
-		*a.messageSockets = append(*a.messageSockets, conn)
-	})
-}
-
 // SocketHandler handles the websocket connection messages and responses.
 func (a *api) SocketHandler() http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -189,7 +140,7 @@ func (a *api) SocketHandler() http.Handler {
 			vID:    uuid.NewV4(),
 		}
 
-		*a.ac = append(*a.ac, &ac)
+		a.ac = append(a.ac, &ac)
 
 		log.Info(colors.boldYellow+"HTTP"+colors.reset, "UPGRADED", GetIP(req))
 
@@ -220,8 +171,8 @@ func (a *api) SocketHandler() http.Handler {
 				response := response{}
 				err = msgpack.Unmarshal(data, &response)
 
-				if response.NetworkID != a.config.NetworkID {
-					log.Warning(response.NetworkID, a.config.NetworkID)
+				if response.NetworkID != a.core.config.NetworkID {
+					log.Warning(response.NetworkID, a.core.config.NetworkID)
 					log.Warning("Peer has incorrect network ID. Terminating connection.")
 					conn.Close()
 					ac.prune(a.ac)
@@ -250,17 +201,6 @@ func (a *api) SocketHandler() http.Handler {
 
 					byteMessage, _ := msgpack.Marshal(message{Type: "authorized"})
 					ac.send(byteMessage)
-
-					if !a.activeClients.connectedTo(response.SignKey) {
-						backClient := client{}
-						backIP, _ := splitIP(GetIP(req))
-						// don't connect to self
-						if backIP != "127.0.0.1" {
-							log.Info("Probing peer " + backIP)
-							backPeer := Peer{Host: backIP, Port: response.Port}
-							go backClient.initialize(a.config, backPeer, a.keys, a, a.activeClients, a.clientReceived, a.db, a.readMu, a.messages)
-						}
-					}
 				} else {
 					log.Warning("Client " + GetIP(req) + " invalid auth signature.")
 					ac.conn.Close()
@@ -302,7 +242,7 @@ func (a *api) SocketHandler() http.Handler {
 				var theirPublicKey [32]byte
 				copy(theirPublicKey[:], ac.sealKey[:32])
 
-				unsealed, success := box.Open(nil, crypt, &nonceA, &theirPublicKey, &a.keys.sealKeys.Priv)
+				unsealed, success := box.Open(nil, crypt, &nonceA, &theirPublicKey, &a.core.keys.sealKeys.Priv)
 				if success {
 					if !a.serverReceived.contains([]byte(broadcast.MessageID)) {
 						a.serverReceived.push([]byte(broadcast.MessageID))
@@ -320,10 +260,10 @@ func (a *api) SocketHandler() http.Handler {
 }
 
 func (a *api) emitBroadcast(message []byte, messageID string) {
-	for _, ac := range *a.ac {
+	for _, ac := range a.ac {
 		if ac.authed {
 			nonce := makeNonce()
-			secret := box.Seal(nil, message, nonce.bytes, keySliceConvert(ac.sealKey), &a.keys.sealKeys.Priv)
+			secret := box.Seal(nil, message, nonce.bytes, keySliceConvert(ac.sealKey), &a.core.keys.sealKeys.Priv)
 			broadcast := broadcast{
 				Type:      "broadcast",
 				Secret:    hex.EncodeToString(secret),
