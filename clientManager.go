@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -111,6 +112,7 @@ func (cm *clientManager) findPeers() {
 
 func (cm *clientManager) takePeers() {
 	for {
+		log.Debug("Currently have " + strconv.Itoa(len(cm.clients)) + " on client list.")
 		if len(cm.clients) < 8 {
 			peer := Peer{}
 			cm.core.db.db.Take(&peer)
