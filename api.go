@@ -203,22 +203,24 @@ func (a *api) SocketHandler() http.Handler {
 					byteMessage, _ := msgpack.Marshal(message{Type: "authorized"})
 					ac.send(byteMessage)
 
-					dbEntry := Peer{}
-					a.core.db.db.Find(&dbEntry, "sign_key = ?", response.SignKey)
-					if dbEntry == (Peer{}) {
-						baseIP, _ := splitIP(GetIP(req))
-						newPeer := Peer{
-							Host:     baseIP,
-							Port:     response.Port,
-							SignKey:  response.SignKey,
-							SealKey:  response.SealKey,
-							LastSeen: time.Now(),
+					baseIP, _ := splitIP(GetIP(req))
+					if baseIP != "127.0.0.1" {
+						dbEntry := Peer{}
+						a.core.db.db.Find(&dbEntry, "sign_key = ?", response.SignKey)
+						if dbEntry == (Peer{}) {
+							newPeer := Peer{
+								Host:     baseIP,
+								Port:     response.Port,
+								SignKey:  response.SignKey,
+								SealKey:  response.SealKey,
+								LastSeen: time.Now(),
+							}
+							log.Debug("Saving new peer " + newPeer.toString(false))
+							a.core.db.db.Create(&newPeer)
+						} else {
+							log.Debug("Updating peer " + dbEntry.toString(false))
+							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
 						}
-						log.Debug("Saving new peer " + newPeer.toString(false))
-						a.core.db.db.Create(&newPeer)
-					} else {
-						log.Debug("Updating peer " + dbEntry.toString(false))
-						a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
 					}
 				} else {
 					log.Warning("Client " + GetIP(req) + " invalid auth signature.")
