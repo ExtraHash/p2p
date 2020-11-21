@@ -58,6 +58,9 @@ func (cm *clientManager) initSelfClient() {
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
 	for _, consumer := range append(cm.clients, cm.selfClient) {
+		if consumer.conn == nil {
+			continue
+		}
 		byteKey, err := hex.DecodeString(consumer.serverInfo.PubSealKey)
 		if err != nil {
 			log.Error(err)
