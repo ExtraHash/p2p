@@ -113,8 +113,22 @@ func (client *client) listen() {
 			client.authorized = true
 			client.connecting = false
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, "logged in to "+client.peer.toString(false))
-			// client.peer.LastSeen = time.Now()
-			// client.core.db.db.Save(client.peer)
+
+			dbEntry := Peer{}
+			client.core.db.db.Find(&dbEntry, "sign_key = ?", client.peer.SignKey)
+			if dbEntry == (Peer{}) {
+				client.core.db.db.Create(&Peer{
+					Host:     client.peer.Host,
+					Port:     client.peer.Port,
+					SignKey:  client.serverInfo.PubSignKey,
+					SealKey:  client.serverInfo.PubSealKey,
+					LastSeen: time.Now(),
+				})
+			} else {
+				dbEntry.SealKey = client.serverInfo.PubSealKey
+				dbEntry.LastSeen = time.Now()
+				client.core.db.db.Save(&dbEntry)
+			}
 		case "broadcast":
 			client.parse(rawMessage)
 		default:
