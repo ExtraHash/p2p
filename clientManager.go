@@ -111,7 +111,7 @@ func (cm *clientManager) takePeers() {
 			log.Debug("Took peer " + peer.toString(false))
 			if !cm.inClientList(peer) {
 				c := client{}
-				c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
+				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
 				cm.addToCoClientList(&c)
 			}
 		}
