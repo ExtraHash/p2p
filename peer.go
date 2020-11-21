@@ -77,7 +77,10 @@ func (p *Peer) toString(includePrefix bool) string {
 
 func (p *Peer) online() bool {
 	infoURL := url.URL{Scheme: "http", Host: p.toString(false), Path: "/info"}
-	_, err := http.Get(infoURL.String())
+	httpClient := http.Client{
+		Timeout: 1 * time.Second,
+	}
+	_, err := httpClient.Get(infoURL.String())
 	if err != nil {
 		return false
 	}

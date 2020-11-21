@@ -49,9 +49,13 @@ func (client *client) initialize(core *core, peer *Peer, received *lockList, rea
 
 func (client *client) handshake() {
 
+	httpClient := http.Client{
+		Timeout: 1 * time.Second,
+	}
+
 	startPing := time.Now()
 	infoURL := url.URL{Scheme: "http", Host: client.toString(), Path: "/info"}
-	iRes, err := http.Get(infoURL.String())
+	iRes, err := httpClient.Get(infoURL.String())
 	if err != nil {
 		client.fail()
 		return

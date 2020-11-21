@@ -97,9 +97,13 @@ func (cm *clientManager) findPeers() {
 	for {
 		peerList := cm.core.db.getPeerList()
 		for _, peer := range peerList {
+
+			httpClient := http.Client{
+				Timeout: 1 * time.Second,
+			}
 			peerURL := url.URL{Scheme: "http", Host: peer.toString(false), Path: "/peers"}
 
-			res, err := http.Get(peerURL.String())
+			res, err := httpClient.Get(peerURL.String())
 			if err != nil {
 				continue
 			}
