@@ -49,12 +49,16 @@ func GetIP(r *http.Request) string {
 }
 
 // LoggerConfig sets up the logger configuration.
-func LoggerConfig() {
+func LoggerConfig(config NetworkConfig) {
 	//initialize logger
-	var format = logging.MustStringFormatter(
+	format := logging.MustStringFormatter(
 		`%{color}%{time:15:04:05.000} › %{color:reset}%{message}`,
 	)
-	backend := logging.NewLogBackend(os.Stderr, "", 0)
+	backend := logging.NewLogBackend(os.Stdin, "", 0)
+	if config.LogLevel < 1 {
+		backend = logging.NewLogBackend(ioutil.Discard, "", 0)
+	}
+
 	backendFormatter := logging.NewBackendFormatter(backend, format)
 	logging.SetBackend(backendFormatter)
 }
@@ -70,7 +74,6 @@ func nonceSliceConvert(nonce []byte) *[24]byte {
 	copy(fNonce[:], nonce[:24])
 	return &fNonce
 }
-
 func contains(s [][]byte, e []byte) bool {
 	for _, a := range s {
 		if bytes.Equal(a, e) {

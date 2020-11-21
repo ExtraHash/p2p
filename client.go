@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"strconv"
 	"sync"
+	"time"
 
 	"encoding/hex"
 	"encoding/json"
@@ -17,47 +18,53 @@ import (
 )
 
 type client struct {
-	conn          *websocket.Conn
-	serverInfo    infoRes
-	authorized    bool
-	connecting    bool
-	keys          keys
-	peer          Peer
-	received      *lockList
-	api           *api
-	activeClients *clientList
-	mu            sync.Mutex
-	readMu        *sync.Mutex
-	db            db
-	config        NetworkConfig
+	core     *core
+	received *lockList
+	readMu   *sync.Mutex
+
+	peer *Peer
+	conn *websocket.Conn
+
+	serverInfo   infoRes
+	authorized   bool
+	connecting   bool
+	failed       bool
+	isSelfClient bool
+	pingTime     time.Duration
+
+	mu sync.Mutex
 }
 
-func (client *client) initialize(config NetworkConfig, peer Peer, keys keys, api *api, activeClients *clientList, received *lockList, db db, readMu *sync.Mutex) {
+func (client *client) initialize(core *core, peer *Peer, received *lockList, readMu *sync.Mutex, selfClient bool) {
+	client.core = core
 	client.connecting = true
 	client.readMu = readMu
-	client.config = config
 	client.authorized = false
-	client.keys = keys
-	client.api = api
-	client.activeClients = activeClients
+	client.failed = false
 	client.received = received
-	client.db = db
 	client.peer = peer
+	client.isSelfClient = selfClient
 	client.handshake()
 }
 
 func (client *client) handshake() {
-	infoURL := url.URL{Scheme: "http", Host: client.toString(), Path: "/info"}
 
-	iRes, err := http.Get(infoURL.String())
+	httpClient := http.Client{
+		Timeout: 1 * time.Second,
+	}
+
+	startPing := time.Now()
+	infoURL := url.URL{Scheme: "http", Host: client.toString(), Path: "/info"}
+	iRes, err := httpClient.Get(infoURL.String())
 	if err != nil {
-		log.Error(err)
+		client.fail()
 		return
 	}
+	client.pingTime = time.Since(startPing)
 
 	infoBody, err := ioutil.ReadAll(iRes.Body)
 	if err != nil {
-		log.Error(err)
+		client.fail()
 		return
 	}
 
@@ -70,7 +77,7 @@ func (client *client) handshake() {
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Error("dial:", err)
+		client.fail()
 		return
 	}
 	client.conn = c
@@ -81,27 +88,21 @@ func (client *client) toString() string {
 	return client.peer.Host + ":" + strconv.Itoa(client.peer.Port)
 }
 
-func (client *client) prune() {
-	client.activeClients.prune(client)
-}
-
 func (client *client) listen() {
 	for {
 		_, rawMessage, err := client.conn.ReadMessage()
 		if err != nil {
-			log.Info("err:", err)
-			client.prune()
+			client.fail()
 			return
 		}
-		if client.config.LogLevel > 1 {
+		if client.core.config.LogLevel > 1 {
 			log.Infof(colors.boldCyan+"RECV"+colors.reset+" %s", rawMessage)
 		}
 
 		msg := message{}
 		err = msgpack.Unmarshal(rawMessage, &msg)
 		if err != nil {
-			log.Error(err)
-			client.prune()
+			client.fail()
 			return
 		}
 		switch msg.Type {
@@ -116,21 +117,7 @@ func (client *client) listen() {
 		case "authorized":
 			client.authorized = true
 			client.connecting = false
-			log.Info(colors.boldGreen+"AUTH"+colors.reset, client.peer.Host)
-			client.activeClients.push(client)
-			dbEntry := Peer{}
-			client.db.db.Where("sign_key = ?", client.serverInfo.PubSignKey).Find(&dbEntry)
-			// if the peer is not currently in database, store it
-			if dbEntry == (Peer{}) && client.peer.Host != "127.0.0.1" {
-				dbEntry := Peer{
-					Host:      client.peer.Host,
-					Port:      client.peer.Port,
-					SignKey:   client.serverInfo.PubSignKey,
-					SealKey:   client.serverInfo.PubSealKey,
-					Connected: false,
-				}
-				client.db.db.Create(&dbEntry)
-			}
+			log.Info(colors.boldGreen+"AUTH"+colors.reset, "Logged in to "+client.peer.toString(false))
 		case "broadcast":
 			client.parse(rawMessage)
 		default:
@@ -142,21 +129,31 @@ func (client *client) listen() {
 func (client *client) decrypt(msg string, nonce string, theirKey string) ([]byte, bool) {
 	bMes, err := hex.DecodeString(msg)
 	if err != nil {
-		panic(err)
+		client.fail()
 	}
 
 	bNonce, err := hex.DecodeString(nonce)
 	if err != nil {
-		panic(err)
+		client.fail()
 	}
 
 	bTheirKey, err := hex.DecodeString(theirKey)
 
-	unsealed, success := box.Open(nil, bMes, nonceSliceConvert(bNonce), keySliceConvert(bTheirKey), &client.keys.sealKeys.Priv)
+	unsealed, success := box.Open(nil, bMes, nonceSliceConvert(bNonce), keySliceConvert(bTheirKey), &client.core.keys.sealKeys.Priv)
 	if !success {
-		panic("Decryption failed.")
+		log.Warning("Decryption failed from " + client.toString())
+		client.fail()
 	}
 	return unsealed, success
+}
+
+func (client *client) fail() {
+	if client.conn != nil {
+		client.conn.Close()
+	}
+	client.failed = true
+	client.connecting = false
+	client.authorized = false
 }
 
 func (client *client) parse(msg []byte) {
@@ -171,57 +168,39 @@ func (client *client) parse(msg []byte) {
 		if !client.received.contains([]byte(broadcast.MessageID)) {
 			client.received.push([]byte(broadcast.MessageID))
 			log.Info(colors.boldMagenta+"CAST"+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
-			client.propagate(unsealed, broadcast.MessageID)
+			go client.emit(unsealed)
+			client.core.clientManager.propagate(unsealed, broadcast.MessageID)
 		} else {
-			if client.config.LogLevel > 1 {
+			if client.core.config.LogLevel > 1 {
 				log.Info(colors.boldMagenta+"CAST"+colors.reset, broadcast.MessageID)
 			}
 		}
 	}
 }
 
-func (client *client) propagate(msg []byte, messageID string) {
-	for _, consumer := range client.activeClients.consumers {
-		byteKey, err := hex.DecodeString(consumer.serverInfo.PubSealKey)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		nonce := makeNonce()
-		secret := box.Seal(nil, msg, nonce.bytes, keySliceConvert(byteKey), &client.keys.sealKeys.Priv)
-		broadcast := broadcast{
-			Type:      "broadcast",
-			Secret:    hex.EncodeToString(secret),
-			Nonce:     nonce.str,
-			MessageID: messageID,
-		}
-		byteCast, err := msgpack.Marshal(broadcast)
-		if err != nil {
-			log.Error(err)
-		} else {
-			consumer.send(byteCast)
-		}
-	}
+func (client *client) emit(data []byte) {
+	*client.core.messages <- data
 }
 
 func (client *client) response(msg []byte) {
 	challenge := challenge{}
 	msgpack.Unmarshal(msg, &challenge)
 
-	signed := ed25519.Sign(client.keys.signKeys.Priv, []byte(challenge.Challenge))
+	signed := ed25519.Sign(client.core.keys.signKeys.Priv, []byte(challenge.Challenge))
 
 	response := response{
 		Type:      "response",
 		Signed:    hex.EncodeToString(signed),
-		SignKey:   hex.EncodeToString(client.keys.signKeys.Pub),
-		SealKey:   hex.EncodeToString(sealToString(client.keys.sealKeys.Pub)),
-		Port:      client.api.config.Port,
-		NetworkID: client.config.NetworkID,
+		SignKey:   hex.EncodeToString(client.core.keys.signKeys.Pub),
+		SealKey:   hex.EncodeToString(sealToString(client.core.keys.sealKeys.Pub)),
+		Port:      client.core.config.Port,
+		NetworkID: client.core.config.NetworkID,
 	}
 
 	bMes, err := msgpack.Marshal(response)
 	if err != nil {
 		log.Error(err)
+		client.fail()
 		return
 	}
 
@@ -234,9 +213,10 @@ func (client *client) send(msg []byte) {
 	err := client.conn.WriteMessage(websocket.BinaryMessage, msg)
 	if err != nil {
 		log.Error(err)
+		client.fail()
 		return
 	}
-	if client.config.LogLevel > 1 {
+	if client.core.config.LogLevel > 1 {
 		log.Infof(colors.boldCyan+"SEND"+colors.reset+" %s", msg)
 	}
 }
