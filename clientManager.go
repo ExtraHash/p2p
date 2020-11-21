@@ -3,6 +3,7 @@ package p2p
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -41,15 +42,15 @@ func (cm *clientManager) logging() {
 		for _, client := range cm.clients {
 			log.Debugf(client.toString() + " ")
 			if client.failed {
-				log.Debugf(colors.boldRed + "FAILED " + colors.reset)
+				fmt.Print(colors.boldRed + "FAILED " + colors.reset)
 			}
 			if client.authorized {
-				log.Debugf(colors.boldGreen + "AUTHORIZED " + colors.reset)
+				fmt.Print(colors.boldGreen + "AUTHORIZED " + colors.reset)
 			}
 			if client.connecting {
-				log.Debugf(colors.boldGreen + "CONNECTING " + colors.reset)
+				fmt.Print(colors.boldGreen + "CONNECTING " + colors.reset)
 			}
-			log.Debugf("\n")
+			fmt.Print("\n")
 		}
 	}
 }
