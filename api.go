@@ -220,10 +220,8 @@ func (a *api) SocketHandler() http.Handler {
 								SealKey:  response.SealKey,
 								LastSeen: time.Now(),
 							}
-							log.Debug("Saving new peer " + newPeer.toString(false))
 							a.core.db.db.Create(&newPeer)
 						} else {
-							log.Debug("Updating peer " + dbEntry.toString(false))
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
 						}
 					}
