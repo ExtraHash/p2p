@@ -50,8 +50,6 @@ func (d *DP2P) Initialize(config NetworkConfig) {
 
 	d.api.initialize(&d.core)
 
-	d.clientManager.initialize(&d.core)
-
 	go d.postAPISetup()
 	d.api.run()
 }
@@ -73,5 +71,6 @@ func (d *DP2P) ReadMessage() []byte {
 }
 
 func (d *DP2P) postAPISetup() {
-
+	time.Sleep(2 * time.Second)
+	d.clientManager.initialize(&d.core)
 }
