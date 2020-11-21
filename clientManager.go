@@ -36,12 +36,12 @@ func (cm *clientManager) initialize(core *core) {
 
 func (cm *clientManager) logging() {
 	for {
-		time.Sleep(2 * time.Minute)
+		time.Sleep(1 * time.Minute)
 		log.Debug("║ Current OUT:")
 		for _, client := range cm.clients {
 			output := "║ " + client.toString()
 			if client.authorized {
-				output += " ✅"
+				output += " ✅  Ping: " + client.pingTime.String()
 			}
 			if client.failed {
 				output += " ❌"
