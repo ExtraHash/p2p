@@ -118,8 +118,8 @@ func (client *client) listen() {
 			client.authorized = true
 			client.connecting = false
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, client.peer.Host)
-			client.peer.LastSeen = time.Now()
-			client.core.db.db.Save(client.peer)
+			// client.peer.LastSeen = time.Now()
+			// client.core.db.db.Save(client.peer)
 		case "broadcast":
 			client.parse(rawMessage)
 		default:
