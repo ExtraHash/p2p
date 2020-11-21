@@ -62,7 +62,7 @@ func (cm *clientManager) initSelfClient() {
 		SealKey: hex.EncodeToString(cm.core.keys.sealKeys.Pub[:]),
 	}
 	selfClient := client{}
-	selfClient.initialize(cm.core, &selfPeer, &cm.clientReceived, &cm.readMu)
+	selfClient.initialize(cm.core, &selfPeer, &cm.clientReceived, &cm.readMu, true)
 	cm.selfClient = &selfClient
 }
 
@@ -133,7 +133,7 @@ func (cm *clientManager) takePeers() {
 			cm.core.db.db.Raw("SELECT * FROM peers ORDER BY RANDOM() LIMIT 1;").Scan(&peer)
 			if !cm.inClientList(peer) {
 				c := client{}
-				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
+				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu, false)
 				cm.addToCoClientList(&c)
 			}
 		}

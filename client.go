@@ -25,16 +25,17 @@ type client struct {
 	peer *Peer
 	conn *websocket.Conn
 
-	serverInfo infoRes
-	authorized bool
-	connecting bool
-	failed     bool
-	pingTime   time.Duration
+	serverInfo   infoRes
+	authorized   bool
+	connecting   bool
+	failed       bool
+	isSelfClient bool
+	pingTime     time.Duration
 
 	mu sync.Mutex
 }
 
-func (client *client) initialize(core *core, peer *Peer, received *lockList, readMu *sync.Mutex) {
+func (client *client) initialize(core *core, peer *Peer, received *lockList, readMu *sync.Mutex, selfClient bool) {
 	client.core = core
 	client.connecting = true
 	client.readMu = readMu
@@ -42,6 +43,7 @@ func (client *client) initialize(core *core, peer *Peer, received *lockList, rea
 	client.failed = false
 	client.received = received
 	client.peer = peer
+	client.isSelfClient = selfClient
 	client.handshake()
 }
 
@@ -114,7 +116,7 @@ func (client *client) listen() {
 			client.connecting = false
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, "Logged in to "+client.peer.toString(false))
 
-			if client.peer.Host != "127.0.0.1" {
+			if !client.isSelfClient {
 				dbEntry := Peer{}
 				client.core.db.db.Find(&dbEntry, "sign_key = ?", client.peer.SignKey)
 				if dbEntry == (Peer{}) {
