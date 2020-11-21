@@ -120,6 +120,7 @@ func (client *client) listen() {
 				dbEntry := Peer{}
 				client.core.db.db.Find(&dbEntry, "sign_key = ?", client.peer.SignKey)
 				if dbEntry == (Peer{}) {
+					log.Debug("Saving new peer " + client.peer.toString(false))
 					client.core.db.db.Create(&Peer{
 						Host:     client.peer.Host,
 						Port:     client.peer.Port,
@@ -128,6 +129,7 @@ func (client *client) listen() {
 						LastSeen: time.Now(),
 					})
 				} else {
+					log.Debug("Updating peer " + client.peer.toString(false))
 					dbEntry.SealKey = client.serverInfo.PubSealKey
 					dbEntry.LastSeen = time.Now()
 					client.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: client.serverInfo.PubSealKey, LastSeen: time.Now()})
