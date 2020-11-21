@@ -116,8 +116,10 @@ func (cm *clientManager) findPeers() {
 				checkPeer := Peer{}
 				cm.core.db.db.Find(&checkPeer, "sign_key = ?", newPeer.SignKey)
 				if checkPeer == (Peer{}) {
-					cm.core.db.db.Create(&newPeer)
-					log.Debug("Discovered peer: " + newPeer.toString(false))
+					if newPeer.online() {
+						cm.core.db.db.Create(&newPeer)
+						log.Debug("Discovered peer: " + newPeer.toString(false))
+					}
 				}
 			}
 		}

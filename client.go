@@ -51,13 +51,12 @@ func (client *client) handshake() {
 
 	startPing := time.Now()
 	infoURL := url.URL{Scheme: "http", Host: client.toString(), Path: "/info"}
-	client.pingTime = time.Since(startPing)
-
 	iRes, err := http.Get(infoURL.String())
 	if err != nil {
 		client.fail()
 		return
 	}
+	client.pingTime = time.Since(startPing)
 
 	infoBody, err := ioutil.ReadAll(iRes.Body)
 	if err != nil {

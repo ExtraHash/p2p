@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -72,4 +73,13 @@ func (p *Peer) toString(includePrefix bool) string {
 		return "http://" + p.Host + ":" + strconv.Itoa(p.Port)
 	}
 	return p.Host + ":" + strconv.Itoa(p.Port)
+}
+
+func (p *Peer) online() bool {
+	infoURL := url.URL{Scheme: "http", Host: p.toString(false), Path: "/info"}
+	_, err := http.Get(infoURL.String())
+	if err != nil {
+		return false
+	}
+	return true
 }
