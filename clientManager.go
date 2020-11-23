@@ -154,7 +154,7 @@ func (cm *clientManager) pruneList() {
 	for {
 		cm.clientMu.Lock()
 		for i, c := range cm.clients {
-			if c.failed {
+			if c.failed || c.conn == nil {
 				cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
 				break
 			}
