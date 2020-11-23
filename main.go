@@ -31,26 +31,32 @@ type NetworkConfig struct {
 }
 
 // Initialize the peer to peer network connection.
-func (d *DP2P) Initialize(config NetworkConfig) {
+func (d *DP2P) Initialize(config NetworkConfig) error {
 	messages := make(chan []byte)
 	d.core.messages = &messages
-
 	d.core.config = config
 
 	_, err := uuid.FromString(config.NetworkID)
 	if err != nil {
 		log.Error("Error parsing network ID. Network ID must be a valid UUID string.")
-		log.Fatal(err)
+		return err
 	}
 
 	LoggerConfig(config)
-	d.core.keys.initialize(config)
-	d.core.db.initialize(config)
-
+	err = d.core.keys.initialize(config)
+	if err != nil {
+		return err
+	}
+	err = d.core.db.initialize(config)
+	if err != nil {
+		return err
+	}
 	d.api.initialize(&d.core)
 
 	go d.postAPISetup()
 	d.api.run()
+
+	return nil
 }
 
 // Broadcast a message on the network. Returns the created message's ID.

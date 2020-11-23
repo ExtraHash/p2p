@@ -12,15 +12,17 @@ type db struct {
 	config NetworkConfig
 }
 
-func (d *db) initialize(config NetworkConfig) {
+func (d *db) initialize(config NetworkConfig) error {
 	d.config = config
 	// initialize database, support sqlite and mysql
 	homedir, err := os.UserHomeDir()
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	db, err := gorm.Open(sqlite.Open(homedir+"/."+progName+"/"+d.config.NetworkID+"/p2p.sqlite"), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	db.AutoMigrate(&Peer{})
@@ -36,6 +38,7 @@ func (d *db) initialize(config NetworkConfig) {
 
 	d.db = db
 	log.Info(colors.boldWhite+"DATA"+colors.reset, "Database ready.")
+	return nil
 }
 
 func (d *db) getPeerList() []Peer {

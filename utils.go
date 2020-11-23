@@ -55,10 +55,6 @@ func LoggerConfig(config NetworkConfig) {
 		`%{color}%{time:15:04:05.000} › %{color:reset}%{message}`,
 	)
 	backend := logging.NewLogBackend(os.Stdin, "", 0)
-	if config.LogLevel < 1 {
-		backend = logging.NewLogBackend(ioutil.Discard, "", 0)
-	}
-
 	backendFormatter := logging.NewBackendFormatter(backend, format)
 	logging.SetBackend(backendFormatter)
 }
@@ -111,28 +107,35 @@ func fileExists(filename string) bool {
 	return true
 }
 
-func writeBytesToFile(filename string, bytes []byte) bool {
-	file, openErr := os.OpenFile(filename, os.O_RDWR, 0700)
-	check(openErr)
+func writeBytesToFile(filename string, bytes []byte) error {
+	file, err := os.OpenFile(filename, os.O_RDWR, 0700)
+	if err != nil {
+		return err
+	}
 
 	file.Write([]byte(hex.EncodeToString(bytes)))
 
-	syncErr := file.Sync()
-	check(syncErr)
+	err = file.Sync()
+	if err != nil {
+		return err
+	}
 
 	file.Close()
-	return true
+	return nil
 }
 
-func readBytesFromFile(filename string) []byte {
+func readBytesFromFile(filename string) ([]byte, error) {
 	// Open file for reading
-	file, openErr := os.Open(filename)
-	check(openErr)
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
 
-	data, readErr := ioutil.ReadAll(file)
-	check(readErr)
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
 
 	bytes, _ := hex.DecodeString(string(data))
-
-	return bytes
+	return bytes, nil
 }

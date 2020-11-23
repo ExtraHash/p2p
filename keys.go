@@ -3,7 +3,6 @@ package p2p
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"encoding/hex"
 	"os"
 
 	"golang.org/x/crypto/nacl/box"
@@ -17,60 +16,107 @@ type keys struct {
 	config     NetworkConfig
 }
 
-func (k *keys) initialize(config NetworkConfig) {
+func (k *keys) initialize(config NetworkConfig) error {
 	k.config = config
-	k.getProgFolder()
-	k.ensureFilesExist()
-	k.loadKeys()
-	k.generateSealKeys()
+	err := k.getProgFolder()
+	if err != nil {
+		return err
+	}
+	err = k.ensureFilesExist()
+	if err != nil {
+		return err
+	}
+	err = k.loadKeys()
+	if err != nil {
+		return err
+	}
+	err = k.generateSealKeys()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (k *keys) getProgFolder() {
+func (k *keys) getProgFolder() error {
 	// obtain the program folder
 	homedir, err := os.UserHomeDir()
-	check(err)
+
+	if err != nil {
+		return err
+	}
 
 	k.progFolder = homedir + "/." + progName
 	k.keyFolder = homedir + "/." + progName + "/" + k.config.NetworkID
+
+	return nil
 }
 
-func (k *keys) ensureFilesExist() {
+func (k *keys) ensureFilesExist() error {
 	if !fileExists(k.progFolder) {
-		log.Info(colors.boldWhite+"KEYS"+colors.reset, "Creating program folder.")
-		os.Mkdir(k.progFolder, 0700)
+		err := os.Mkdir(k.progFolder, 0700)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !fileExists(k.keyFolder) {
-		log.Info(colors.boldWhite+"KEYS"+colors.reset, "Creating key folder.")
-		os.Mkdir(k.keyFolder, 0700)
+		err := os.Mkdir(k.keyFolder, 0700)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !fileExists(k.keyFolder + "/signKey.priv") {
-		k.writeSignKeys()
+		err := k.writeSignKeys()
+		if err != nil {
+			return err
+		}
 	}
 
+	return nil
 }
 
-func (k *keys) writeSignKeys() {
-	log.Info(colors.boldWhite+"KEYS"+colors.reset, "Creating keyfiles.")
+func (k *keys) writeSignKeys() error {
 	if !fileExists(k.keyFolder + "/signKey.pub") {
-		os.Create(k.keyFolder + "/signKey.pub")
+		_, err := os.Create(k.keyFolder + "/signKey.pub")
+		if err != nil {
+			return err
+		}
 	}
 	if !fileExists(k.keyFolder + "/signKey.priv") {
-		os.Create(k.keyFolder + "/signKey.priv")
+		_, err := os.Create(k.keyFolder + "/signKey.priv")
+		if err != nil {
+			return err
+		}
 	}
 
 	k.signKeys = k.generateSignKeys()
 
-	writeBytesToFile(k.keyFolder+"/signKey.pub", k.signKeys.Pub)
-	writeBytesToFile(k.keyFolder+"/signKey.priv", k.signKeys.Priv)
+	err := writeBytesToFile(k.keyFolder+"/signKey.pub", k.signKeys.Pub)
+	if err != nil {
+		return err
+	}
+	err = writeBytesToFile(k.keyFolder+"/signKey.priv", k.signKeys.Priv)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (k *keys) loadKeys() {
-	k.signKeys.Pub = readBytesFromFile(k.keyFolder + "/signKey.pub")
-	k.signKeys.Priv = readBytesFromFile(k.keyFolder + "/signKey.priv")
+func (k *keys) loadKeys() error {
+	pubKey, err := readBytesFromFile(k.keyFolder + "/signKey.pub")
+	if err != nil {
+		return err
+	}
+	k.signKeys.Pub = pubKey
 
-	log.Info(colors.boldWhite+"KEYS"+colors.reset, "Public signing key: "+hex.EncodeToString(k.signKeys.Pub))
+	privKey, err := readBytesFromFile(k.keyFolder + "/signKey.priv")
+	if err != nil {
+		return err
+	}
+	k.signKeys.Priv = privKey
+	return nil
 }
 
 func (k *keys) generateSignKeys() SignKeys {
@@ -84,14 +130,13 @@ func (k *keys) generateSignKeys() SignKeys {
 	return signKeys
 }
 
-func (k *keys) generateSealKeys() {
+func (k *keys) generateSealKeys() error {
 	pubKey, privKey, err := box.GenerateKey(rand.Reader)
-	check(err)
-
-	slicePub := pubKey[:]
+	if err != nil {
+		return err
+	}
 
 	k.sealKeys.Pub = *pubKey
 	k.sealKeys.Priv = *privKey
-
-	log.Info(colors.boldWhite+"KEYS"+colors.reset, "Public sealing key: "+hex.EncodeToString(slicePub))
+	return nil
 }

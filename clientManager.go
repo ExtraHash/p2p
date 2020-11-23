@@ -68,6 +68,9 @@ func (cm *clientManager) initSelfClient() {
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
 	for _, consumer := range append(cm.clients, cm.selfClient) {
+		if consumer == nil {
+			continue
+		}
 		if consumer.conn == nil {
 			continue
 		}
@@ -143,7 +146,7 @@ func (cm *clientManager) takePeers() {
 				cm.addToCoClientList(&c)
 			}
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 

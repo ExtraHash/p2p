@@ -34,12 +34,13 @@ func (a *api) initialize(core *core) {
 }
 
 // Run starts the server.
-func (a *api) run() {
+func (a *api) run() error {
 	log.Info(colors.boldYellow+"HTTP"+colors.reset, "Starting API on port "+strconv.Itoa(a.core.config.Port)+".")
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(a.core.config.Port),
+	err := http.ListenAndServe(":"+strconv.Itoa(a.core.config.Port),
 		handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS", "PATCH"}),
-			handlers.AllowedOrigins([]string{"*"}))(a.router)))
+			handlers.AllowedOrigins([]string{"*"}))(a.router))
+	return err
 }
 
 func (a *api) getRouter() {
