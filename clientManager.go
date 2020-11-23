@@ -155,6 +155,7 @@ func (cm *clientManager) pruneList() {
 		cm.clientMu.Lock()
 		for i, c := range cm.clients {
 			if c.failed || c.conn == nil {
+				log.Debug("Removing dead connection", c.peer.toString(false))
 				cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
 				break
 			}
