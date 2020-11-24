@@ -137,6 +137,8 @@ func (a *api) SocketHandler() http.Handler {
 			return
 		}
 
+		conn.SetReadLimit(10 << 22)
+
 		ac := ActiveConnection{
 			conn:   conn,
 			host:   GetIP(req),
