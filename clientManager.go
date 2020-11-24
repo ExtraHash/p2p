@@ -26,6 +26,7 @@ type clientManager struct {
 
 func (cm *clientManager) initialize(core *core) {
 	cm.core = core
+	cm.clients = &[]*client{}
 	cm.initSelfClient()
 
 	go cm.takePeers()
