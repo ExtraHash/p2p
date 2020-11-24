@@ -18,7 +18,7 @@ type clientManager struct {
 	core *core
 
 	clientMu       sync.Mutex
-	clients        []*client
+	clients        *[]*client
 	selfClient     *client
 	clientReceived lockList
 	readMu         sync.Mutex
@@ -38,7 +38,7 @@ func (cm *clientManager) logging() {
 	for {
 		time.Sleep(1 * time.Minute)
 		log.Debug("║ Current OUT:")
-		for _, client := range cm.clients {
+		for _, client := range *cm.clients {
 			output := "║ " + client.toString()
 			if client.authorized {
 				output += " ✅  Ping: " + client.pingTime.String()
@@ -67,7 +67,7 @@ func (cm *clientManager) initSelfClient() {
 }
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
-	for _, consumer := range append(cm.clients, cm.selfClient) {
+	for _, consumer := range append(*cm.clients, cm.selfClient) {
 		if consumer == nil {
 			continue
 		}
@@ -137,7 +137,7 @@ func (cm *clientManager) findPeers() {
 
 func (cm *clientManager) takePeers() {
 	for {
-		if len(cm.clients) < 8 {
+		if len(*cm.clients) < 8 {
 			peer := Peer{}
 			cm.core.db.db.Raw("SELECT * FROM peers ORDER BY RANDOM() LIMIT 1;").Scan(&peer)
 			if !cm.inClientList(peer) {
@@ -153,10 +153,10 @@ func (cm *clientManager) takePeers() {
 func (cm *clientManager) pruneList() {
 	for {
 		cm.clientMu.Lock()
-		for i, c := range cm.clients {
+		for i, c := range *cm.clients {
 			if c.failed || c.conn == nil {
 				log.Debug("Removing dead connection", c.peer.toString(false))
-				cm.clients = append(cm.clients[:i], cm.clients[i+1:]...)
+				*cm.clients = append((*cm.clients)[:i], (*cm.clients)[i+1:]...)
 				break
 			}
 		}
@@ -169,13 +169,13 @@ func (cm *clientManager) pruneList() {
 func (cm *clientManager) addToCoClientList(newClient *client) {
 	cm.clientMu.Lock()
 	defer cm.clientMu.Unlock()
-	cm.clients = append(cm.clients, newClient)
+	*cm.clients = append(*cm.clients, newClient)
 }
 
 func (cm *clientManager) inClientList(peer Peer) bool {
 	cm.clientMu.Lock()
 	defer cm.clientMu.Unlock()
-	for _, c := range cm.clients {
+	for _, c := range *cm.clients {
 		if c.peer.SignKey == peer.SignKey {
 			return true
 		}
