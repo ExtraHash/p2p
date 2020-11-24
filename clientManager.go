@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -68,6 +69,7 @@ func (cm *clientManager) initSelfClient() {
 }
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
+	log.Info("Outgoing message pre-decryption size: " + strconv.Itoa(cap(msg)))
 	for _, consumer := range append(*cm.clients, cm.selfClient) {
 		if consumer == nil {
 			continue
@@ -92,6 +94,7 @@ func (cm *clientManager) propagate(msg []byte, messageID string) {
 		if err != nil {
 			log.Error(err)
 		} else {
+			log.Info("Outgoing message post-decryption size: " + strconv.Itoa(cap(byteCast)))
 			consumer.send(byteCast)
 		}
 	}
