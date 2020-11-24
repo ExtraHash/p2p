@@ -157,7 +157,9 @@ func (cm *clientManager) pruneList() {
 		for i, c := range *cm.clients {
 			if c.failed || c.conn == nil {
 				log.Debug("Removing dead connection", c.peer.toString(false))
-				*cm.clients = append((*cm.clients)[:i], (*cm.clients)[i+1:]...)
+				(*cm.clients)[i] = (*cm.clients)[len((*cm.clients))-1] // Copy last element to index i.
+				(*cm.clients)[len((*cm.clients))-1] = nil              // Erase last element (write zero value).
+				(*cm.clients) = (*cm.clients)[:len((*cm.clients))-1]   // Truncate slice.
 				break
 			}
 		}
