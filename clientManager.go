@@ -28,7 +28,6 @@ type clientManager struct {
 func (cm *clientManager) initialize(core *core) {
 	cm.core = core
 	cm.clients = &[]*client{}
-	cm.initSelfClient()
 
 	go cm.takePeers()
 	go cm.findPeers()
@@ -54,18 +53,6 @@ func (cm *clientManager) logging() {
 			log.Debug(output)
 		}
 	}
-}
-
-func (cm *clientManager) initSelfClient() {
-	selfPeer := Peer{
-		Host:    "127.0.0.1",
-		Port:    cm.core.config.Port,
-		SignKey: hex.EncodeToString(cm.core.keys.signKeys.Pub),
-		SealKey: hex.EncodeToString(cm.core.keys.sealKeys.Pub[:]),
-	}
-	selfClient := client{}
-	selfClient.initialize(cm.core, &selfPeer, &cm.clientReceived, &cm.readMu, true)
-	cm.selfClient = &selfClient
 }
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
@@ -146,7 +133,7 @@ func (cm *clientManager) takePeers() {
 			cm.core.db.db.Raw("SELECT * FROM peers ORDER BY RANDOM() LIMIT 1;").Scan(&peer)
 			if !cm.inClientList(peer) {
 				c := client{}
-				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu, false)
+				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
 				cm.addToCoClientList(&c)
 			}
 		}
