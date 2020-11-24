@@ -137,7 +137,7 @@ func (a *api) SocketHandler() http.Handler {
 			return
 		}
 
-		conn.SetReadLimit(25 << 20)
+		conn.SetReadLimit(50000000)
 
 		ac := ActiveConnection{
 			conn:   conn,
