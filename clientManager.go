@@ -1,13 +1,11 @@
 package p2p
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
@@ -57,7 +55,6 @@ func (cm *clientManager) logging() {
 }
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
-	log.Info("Outgoing message pre-decryption size: " + strconv.Itoa(binary.Size(msg)))
 	for _, consumer := range append(*cm.clients, cm.selfClient) {
 		if consumer == nil {
 			continue
@@ -82,7 +79,6 @@ func (cm *clientManager) propagate(msg []byte, messageID string) {
 		if err != nil {
 			log.Error(err)
 		} else {
-			log.Info("Outgoing message post-decryption size: " + strconv.Itoa(binary.Size(byteCast)))
 			consumer.send(byteCast)
 		}
 	}
