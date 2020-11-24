@@ -156,7 +156,17 @@ func (cm *clientManager) pruneList() {
 		cm.clientMu.Lock()
 		for i, c := range *cm.clients {
 			if c.failed || c.conn == nil {
-				log.Debug("Removing dead connection", c.peer.toString(false))
+				dbEntry := Peer{}
+				cm.core.db.db.Where("sign_key = ?", c.peer.SignKey).Find(&dbEntry)
+
+				dbEntry.FailCount++
+
+				if dbEntry.FailCount > 5 {
+					cm.core.db.db.Delete(&dbEntry)
+				} else {
+					cm.core.db.db.Save(&dbEntry)
+				}
+
 				(*cm.clients)[i] = (*cm.clients)[len((*cm.clients))-1] // Copy last element to index i.
 				(*cm.clients)[len((*cm.clients))-1] = nil              // Erase last element (write zero value).
 				(*cm.clients) = (*cm.clients)[:len((*cm.clients))-1]   // Truncate slice.
