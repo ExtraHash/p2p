@@ -125,8 +125,9 @@ func (a *api) SocketHandler() http.Handler {
 		log.Info(colors.boldYellow+"HTTP"+colors.reset, req.Method, req.URL, GetIP(req))
 
 		var upgrader = websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:    1024,
+			WriteBufferSize:   1024,
+			EnableCompression: true,
 		}
 
 		upgrader.CheckOrigin = func(req *http.Request) bool { return true }
@@ -137,7 +138,7 @@ func (a *api) SocketHandler() http.Handler {
 			return
 		}
 
-		conn.SetReadLimit(2000000)
+		conn.SetReadLimit(3000000)
 
 		ac := ActiveConnection{
 			conn:   conn,
