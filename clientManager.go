@@ -159,12 +159,10 @@ func (cm *clientManager) pruneList() {
 				dbEntry := Peer{}
 				cm.core.db.db.Where("sign_key = ?", c.peer.SignKey).Find(&dbEntry)
 
-				dbEntry.FailCount++
-
 				if dbEntry.FailCount > 5 {
-					cm.core.db.db.Delete(&dbEntry)
+					cm.core.db.db.Delete(&dbEntry, "sign_key = ?", dbEntry.SignKey)
 				} else {
-					cm.core.db.db.Save(&dbEntry)
+					cm.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{FailCount: dbEntry.FailCount + 1})
 				}
 
 				(*cm.clients)[i] = (*cm.clients)[len((*cm.clients))-1] // Copy last element to index i.
