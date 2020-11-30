@@ -266,7 +266,7 @@ func (a *api) SocketHandler() http.Handler {
 							}
 							a.core.db.db.Create(&newPeer)
 							dbEntry = newPeer
-							log.Debug("Api discovered new inbound peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
+							log.Info("Api discovered new inbound peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
 						} else {
 							dbEntry.Direction = "in"
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
