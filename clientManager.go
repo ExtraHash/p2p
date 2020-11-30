@@ -19,7 +19,6 @@ type clientManager struct {
 
 	clientMu       sync.Mutex
 	clients        *[]*client
-	selfClient     *client
 	clientReceived lockList
 	readMu         sync.Mutex
 }
@@ -32,6 +31,14 @@ func (cm *clientManager) initialize(core *core) {
 	go cm.findPeers()
 	go cm.pruneList()
 	go cm.logging()
+}
+
+func (cm *clientManager) getPeerList() []Peer {
+	peers := []Peer{}
+	for _, client := range *cm.clients {
+		peers = append(peers, *client.peer)
+	}
+	return peers
 }
 
 func (cm *clientManager) logging() {
@@ -54,8 +61,48 @@ func (cm *clientManager) logging() {
 	}
 }
 
+func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bool {
+	if cm.clients == nil {
+		return false
+	}
+	for _, consumer := range *cm.clients {
+		if consumer == nil {
+			continue
+		}
+		if consumer.conn == nil {
+			continue
+		}
+		if consumer.serverInfo.PubSealKey == pubKey {
+			byteKey, err := hex.DecodeString(consumer.serverInfo.PubSealKey)
+			if err != nil {
+				log.Error(err)
+				return false
+			}
+			nonce := makeNonce()
+			secret := box.Seal(nil, msg, nonce.bytes, keySliceConvert(byteKey), &cm.core.keys.sealKeys.Priv)
+			broadcast := broadcast{
+				Type:      "whisper",
+				Secret:    hex.EncodeToString(secret),
+				Nonce:     nonce.str,
+				MessageID: messageID,
+			}
+			byteCast, err := msgpack.Marshal(broadcast)
+			if err != nil {
+				log.Error(err)
+			} else {
+				consumer.send(byteCast)
+			}
+			return true
+		}
+	}
+	return false
+}
+
 func (cm *clientManager) propagate(msg []byte, messageID string) {
-	for _, consumer := range append(*cm.clients, cm.selfClient) {
+	if cm.clients == nil {
+		return
+	}
+	for _, consumer := range *cm.clients {
 		if consumer == nil {
 			continue
 		}

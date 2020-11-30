@@ -138,7 +138,7 @@ func TestNetwork(t *testing.T) {
 
 		if bytes.Equal(message, token) {
 			received++
-
+			t.Log(string(message))
 			if received > 5 {
 				return
 			}

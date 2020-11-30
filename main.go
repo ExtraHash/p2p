@@ -59,11 +59,17 @@ func (d *DP2P) Initialize(config NetworkConfig) error {
 	return nil
 }
 
+// Whisper a message to a single peer with the provided public sign key. Returns true if succesful.
+func (d *DP2P) Whisper(message []byte, pubKey string) bool {
+	mID := uuid.NewV4()
+	return d.core.clientManager.whisper(message, pubKey, mID.String())
+}
+
 // Broadcast a message on the network. Returns the created message's ID.
-func (d *DP2P) Broadcast(message []byte) uuid.UUID {
+func (d *DP2P) Broadcast(message []byte) string {
 	mID := uuid.NewV4()
 	d.core.clientManager.propagate(message, mID.String())
-	return mID
+	return mID.String()
 }
 
 // ReadMessage will get the next broadcasted message on the network. It blocks
@@ -73,6 +79,11 @@ func (d *DP2P) ReadMessage() []byte {
 		time.Sleep(100 * time.Millisecond)
 	}
 	return <-*d.core.messages
+}
+
+// GetPeerList returns all peers you are currently connected to.
+func (d *DP2P) GetPeerList() []Peer {
+	return d.core.clientManager.getPeerList()
 }
 
 func (d *DP2P) postAPISetup() {
