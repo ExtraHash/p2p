@@ -3,6 +3,7 @@ package p2p
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -74,6 +75,7 @@ func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bo
 		if consumer.conn == nil {
 			continue
 		}
+		fmt.Println(consumer.peer.SignKey)
 		if consumer.serverInfo.PubSealKey == pubKey {
 			byteKey, err := hex.DecodeString(consumer.peer.SignKey)
 			if err != nil {
