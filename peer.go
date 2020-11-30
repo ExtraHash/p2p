@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 // Peer is a single peer on the network
@@ -26,48 +24,52 @@ type Peer struct {
 	Direction  string    `json:"-" gorm:"-"`
 }
 
-func (p *Peer) verify(vID uuid.UUID) verifyRes {
-	log.Notice("OUT", "GET", "/verify/"+vID.String(), p.toString(false))
-	vRes, err := http.Get(p.toString(true) + "/verify/" + vID.String())
-	if err != nil {
-		log.Error(err)
-		panic(err)
-	}
-	verBody, err := ioutil.ReadAll(vRes.Body)
-	verify := verifyRes{}
-	json.Unmarshal(verBody, &verify)
-
-	return verify
-}
-
-func (p *Peer) info() infoRes {
+func (p *Peer) info() (infoRes, error) {
 	log.Notice("OUT", "GET", "/info", p.toString(false))
-	iRes, err := http.Get(p.toString(true) + "/info")
+
+	httpClient := http.Client{
+		Timeout: 1 * time.Second,
+	}
+
+	iRes, err := httpClient.Get(p.toString(true) + "/info")
 	if err != nil {
 		log.Error(err)
-		panic(err)
+		return infoRes{}, err
 	}
 
 	infoBody, err := ioutil.ReadAll(iRes.Body)
+	if err != nil {
+		log.Error(err)
+		return infoRes{}, err
+	}
 	info := infoRes{}
 	json.Unmarshal(infoBody, &info)
 
-	return info
+	return info, nil
 }
 
-func (p *Peer) peerList() []Peer {
+func (p *Peer) peerList() ([]Peer, error) {
 	log.Notice("OUT", "GET", "/peers", p.toString(false))
-	iRes, err := http.Get(p.toString(true) + "/peers")
+
+	httpClient := http.Client{
+		Timeout: 1 * time.Second,
+	}
+
+	iRes, err := httpClient.Get(p.toString(true) + "/peers")
 	if err != nil {
 		log.Error(err)
-		panic(err)
+		return nil, err
 	}
 
 	peerBody, err := ioutil.ReadAll(iRes.Body)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 	peers := []Peer{}
 	json.Unmarshal(peerBody, &peers)
 
-	return peers
+	return peers, err
 }
 
 func (p *Peer) toString(includePrefix bool) string {

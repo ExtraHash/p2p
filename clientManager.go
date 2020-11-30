@@ -2,11 +2,7 @@ package p2p
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -150,33 +146,23 @@ func (cm *clientManager) findPeers() {
 		peerList := cm.core.db.getPeerList()
 		for _, peer := range peerList {
 
-			httpClient := http.Client{
-				Timeout: 1 * time.Second,
-			}
-			peerURL := url.URL{Scheme: "http", Host: peer.toString(false), Path: "/peers"}
-
-			res, err := httpClient.Get(peerURL.String())
+			peerKnownPeers, err := peer.peerList()
 			if err != nil {
 				continue
 			}
 
-			peerBody, err := ioutil.ReadAll(res.Body)
+			peerInfo, err := peer.info()
 			if err != nil {
 				continue
 			}
 
-			newList := []Peer{}
-			json.Unmarshal(peerBody, &newList)
-
-			for _, newPeer := range newList {
-				checkPeer := Peer{}
-				cm.core.db.db.Find(&checkPeer, "sign_key = ?", newPeer.SignKey)
-				if checkPeer == (Peer{}) {
-					if newPeer.online() {
-						newPeer.Acessible = true
-						cm.core.db.db.Create(&newPeer)
-						log.Info("findPeers() Discovered peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
-					}
+			for _, newPeer := range peerKnownPeers {
+				if newPeer.online() {
+					newPeer.Acessible = true
+					newPeer.SignKey = peerInfo.PubSignKey
+					newPeer.LastSeen = time.Now()
+					cm.core.db.db.Create(&newPeer)
+					log.Info("findPeers() Discovered peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
 				}
 			}
 		}
