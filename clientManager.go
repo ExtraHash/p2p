@@ -151,18 +151,18 @@ func (cm *clientManager) findPeers() {
 				continue
 			}
 
-			peerInfo, err := peer.info()
-			if err != nil {
-				continue
-			}
+			for _, unknownPeer := range peerKnownPeers {
+				if unknownPeer.online() {
+					peerInfo, err := unknownPeer.info()
+					if err != nil {
+						continue
+					}
 
-			for _, newPeer := range peerKnownPeers {
-				if newPeer.online() {
-					newPeer.Acessible = true
-					newPeer.SignKey = peerInfo.PubSignKey
-					newPeer.LastSeen = time.Now()
-					cm.core.db.db.Create(&newPeer)
-					log.Info("findPeers() Discovered peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
+					unknownPeer.Acessible = true
+					unknownPeer.SignKey = peerInfo.PubSignKey
+					unknownPeer.LastSeen = time.Now()
+					cm.core.db.db.Create(&unknownPeer)
+					log.Info("findPeers() Discovered peer: " + unknownPeer.toString(false) + " " + unknownPeer.SignKey)
 				}
 			}
 		}
