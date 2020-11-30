@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"fmt"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -91,7 +90,6 @@ func (d *DP2P) GetPeerList() []Peer {
 	inPeers := d.api.getPeerList()
 
 	allPeers := deDupe(append(outPeers, inPeers...))
-	fmt.Printf("%+v\n", allPeers)
 
 	return allPeers
 }
