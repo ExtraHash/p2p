@@ -269,7 +269,7 @@ func (a *api) SocketHandler() http.Handler {
 							log.Info("Api discovered new inbound peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
 						} else {
 							dbEntry.Direction = "in"
-							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
+							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{LastSeen: time.Now()})
 						}
 						if dbEntry.online() {
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{Acessible: true})

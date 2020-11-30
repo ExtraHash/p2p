@@ -178,7 +178,7 @@ func (cm *clientManager) takePeers() {
 			cm.core.db.db.Raw("SELECT * FROM peers WHERE acessible = ? ORDER BY RANDOM() LIMIT 1;", true).Scan(&peer)
 			if !cm.inClientList(peer) && peer.online() {
 				peer.LastSeen = time.Now()
-				cm.core.db.db.Save(&peer)
+				cm.core.db.db.Model(&Peer{}).Where("sign_key = ?", peer.SignKey).Updates(Peer{LastSeen: time.Now()})
 				c := client{}
 				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
 				cm.addToCoClientList(&c)
