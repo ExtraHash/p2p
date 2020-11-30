@@ -27,6 +27,29 @@ type api struct {
 	serverReceived lockList
 }
 
+func (a *api) whisper(msg []byte, pubKey string, messageID string) bool {
+	for _, connection := range a.ac {
+		if hex.EncodeToString(connection.signkey) == pubKey {
+			nonce := makeNonce()
+			secret := box.Seal(nil, msg, nonce.bytes, keySliceConvert(connection.sealKey), &a.core.keys.sealKeys.Priv)
+			whisper := broadcast{
+				Type:      "whisper",
+				Secret:    hex.EncodeToString(secret),
+				Nonce:     nonce.str,
+				MessageID: messageID,
+			}
+			byteWhisper, err := msgpack.Marshal(whisper)
+			if err != nil {
+				log.Error(err)
+				return false
+			}
+			connection.send(byteWhisper)
+			return true
+		}
+	}
+	return false
+}
+
 func (a *api) initialize(core *core) {
 	a.core = core
 	a.ac = []*ActiveConnection{}

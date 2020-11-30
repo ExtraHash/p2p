@@ -62,7 +62,10 @@ func (d *DP2P) Initialize(config NetworkConfig) error {
 // Whisper a message to a single peer with the provided public sign key. Returns true if succesful.
 func (d *DP2P) Whisper(message []byte, pubKey string) bool {
 	mID := uuid.NewV4()
-	return d.core.clientManager.whisper(message, pubKey, mID.String())
+	if !d.core.clientManager.whisper(message, pubKey, mID.String()) {
+		return d.api.whisper(message, pubKey, mID.String())
+	}
+	return true
 }
 
 // Broadcast a message on the network. Returns the created message's ID.
