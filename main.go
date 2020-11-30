@@ -95,11 +95,11 @@ func (d *DP2P) GetPeerList() []Peer {
 }
 
 func deDupe(peers []Peer) []Peer {
-	keys := make(map[Peer]bool)
+	keys := make(map[string]bool)
 	peerList := []Peer{}
 	for _, peer := range peers {
-		if _, value := keys[peer]; !value {
-			keys[peer] = true
+		if _, value := keys[peer.SignKey]; !value {
+			keys[peer.SignKey] = true
 			peerList = append(peerList, peer)
 		}
 	}
