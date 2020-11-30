@@ -36,7 +36,9 @@ func (cm *clientManager) initialize(core *core) {
 func (cm *clientManager) getPeerList() []Peer {
 	peers := []Peer{}
 	for _, client := range *cm.clients {
-		peers = append(peers, *client.peer)
+		if client.authorized {
+			peers = append(peers, *client.peer)
+		}
 	}
 	return peers
 }
