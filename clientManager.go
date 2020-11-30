@@ -35,8 +35,17 @@ func (cm *clientManager) initialize(core *core) {
 }
 
 func (cm *clientManager) getPeerList() []Peer {
+	cm.clientMu.Lock()
+	defer cm.clientMu.Unlock()
+	if cm.clients == nil {
+		return []Peer{}
+	}
+
 	peers := []Peer{}
 	for _, client := range *cm.clients {
+		if client == nil {
+			continue
+		}
 		if client.authorized {
 			peers = append(peers, *client.peer)
 		}
@@ -163,6 +172,7 @@ func (cm *clientManager) findPeers() {
 				cm.core.db.db.Find(&checkPeer, "sign_key = ?", newPeer.SignKey)
 				if checkPeer == (Peer{}) {
 					if newPeer.online() {
+						newPeer.Acessible = true
 						cm.core.db.db.Create(&newPeer)
 						log.Debug("Discovered peer: " + newPeer.toString(false))
 					}
@@ -178,7 +188,7 @@ func (cm *clientManager) takePeers() {
 	for {
 		if len(*cm.clients) < 8 {
 			peer := Peer{}
-			cm.core.db.db.Raw("SELECT * FROM peers ORDER BY RANDOM() LIMIT 1;").Scan(&peer)
+			cm.core.db.db.Raw("SELECT * FROM peers WHERE acessible = ? ORDER BY RANDOM() LIMIT 1;", true).Scan(&peer)
 			if !cm.inClientList(peer) {
 				c := client{}
 				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)

@@ -27,6 +27,21 @@ type api struct {
 	serverReceived lockList
 }
 
+func (a *api) getPeerList() []Peer {
+	a.acMu.Lock()
+	defer a.acMu.Unlock()
+
+	peerList := []Peer{}
+
+	for _, conn := range a.ac {
+		if conn.authed {
+			peerList = append(peerList, conn.dbEntry)
+		}
+	}
+
+	return []Peer{}
+}
+
 func (a *api) whisper(msg []byte, pubKey string, messageID string) bool {
 	for _, connection := range a.ac {
 		if hex.EncodeToString(connection.signkey) == pubKey {
@@ -241,18 +256,21 @@ func (a *api) SocketHandler() http.Handler {
 						a.core.db.db.Find(&dbEntry, "sign_key = ?", response.SignKey)
 						if dbEntry == (Peer{}) {
 							newPeer := Peer{
-								Host:     baseIP,
-								Port:     response.Port,
-								SignKey:  response.SignKey,
-								SealKey:  response.SealKey,
-								LastSeen: time.Now(),
+								Host:      baseIP,
+								Port:      response.Port,
+								SignKey:   response.SignKey,
+								SealKey:   response.SealKey,
+								LastSeen:  time.Now(),
+								Acessible: false,
 							}
-							if newPeer.online() {
-								a.core.db.db.Create(&newPeer)
-								log.Debug("Discovered peer: " + newPeer.toString(false))
-							}
+							a.core.db.db.Create(&newPeer)
+							dbEntry = newPeer
+							log.Debug("Discovered peer: " + newPeer.toString(false))
 						} else {
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
+						}
+						if dbEntry.online() {
+							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{Acessible: true})
 						}
 					}
 				} else {

@@ -20,6 +20,7 @@ type ActiveConnection struct {
 	signkey ed25519.PublicKey
 	sealKey []byte
 	mu      sync.Mutex
+	dbEntry Peer
 }
 
 func (ac *ActiveConnection) send(msg []byte) {

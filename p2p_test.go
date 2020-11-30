@@ -129,6 +129,8 @@ func TestNetwork(t *testing.T) {
 		for {
 			time.Sleep(1 * time.Second)
 			p2p.Broadcast(token)
+
+			t.Log(p2p.GetPeerList())
 		}
 	})()
 
@@ -139,7 +141,7 @@ func TestNetwork(t *testing.T) {
 		if bytes.Equal(message, token) {
 			received++
 			t.Log(string(message))
-			if received > 5 {
+			if received > 100 {
 				return
 			}
 		}

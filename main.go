@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -86,7 +87,25 @@ func (d *DP2P) ReadMessage() []byte {
 
 // GetPeerList returns all peers you are currently connected to.
 func (d *DP2P) GetPeerList() []Peer {
-	return d.core.clientManager.getPeerList()
+	outPeers := d.core.clientManager.getPeerList()
+	inPeers := d.api.getPeerList()
+
+	allPeers := deDupe(append(outPeers, inPeers...))
+	fmt.Printf("%+v\n", allPeers)
+
+	return allPeers
+}
+
+func deDupe(peers []Peer) []Peer {
+	keys := make(map[Peer]bool)
+	peerList := []Peer{}
+	for _, peer := range peers {
+		if _, value := keys[peer]; !value {
+			keys[peer] = true
+			peerList = append(peerList, peer)
+		}
+	}
+	return peerList
 }
 
 func (d *DP2P) postAPISetup() {
