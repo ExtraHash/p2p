@@ -75,7 +75,7 @@ func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bo
 			continue
 		}
 		if consumer.serverInfo.PubSealKey == pubKey {
-			byteKey, err := hex.DecodeString(consumer.serverInfo.PubSealKey)
+			byteKey, err := hex.DecodeString(consumer.peer.SignKey)
 			if err != nil {
 				log.Error(err)
 				return false
