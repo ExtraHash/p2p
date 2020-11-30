@@ -157,12 +157,15 @@ func (cm *clientManager) findPeers() {
 					if err != nil {
 						continue
 					}
-
-					unknownPeer.Acessible = true
-					unknownPeer.SignKey = peerInfo.PubSignKey
-					unknownPeer.LastSeen = time.Now()
-					cm.core.db.db.Create(&unknownPeer)
-					log.Info("findPeers() Discovered peer: " + unknownPeer.toString(false) + " " + unknownPeer.SignKey)
+					checkPeer := Peer{}
+					cm.core.db.db.Find(&checkPeer, "sign_key = ?", peerInfo.PubSignKey)
+					if checkPeer == (Peer{}) {
+						unknownPeer.Acessible = true
+						unknownPeer.SignKey = peerInfo.PubSignKey
+						unknownPeer.LastSeen = time.Now()
+						cm.core.db.db.Create(&unknownPeer)
+						log.Info("findPeers() Discovered peer: " + unknownPeer.toString(false) + " " + unknownPeer.SignKey)
+					}
 				}
 			}
 		}
@@ -177,7 +180,6 @@ func (cm *clientManager) takePeers() {
 			peer := Peer{}
 			cm.core.db.db.Raw("SELECT * FROM peers WHERE acessible = ? ORDER BY RANDOM() LIMIT 1;", true).Scan(&peer)
 			if !cm.inClientList(peer) && peer.online() {
-				peer.LastSeen = time.Now()
 				cm.core.db.db.Model(&Peer{}).Where("sign_key = ?", peer.SignKey).Updates(Peer{LastSeen: time.Now()})
 				c := client{}
 				go c.initialize(cm.core, &peer, &cm.clientReceived, &cm.readMu)
