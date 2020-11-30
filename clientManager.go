@@ -47,6 +47,7 @@ func (cm *clientManager) getPeerList() []Peer {
 			continue
 		}
 		if client.authorized {
+			*&client.peer.Direction = "out"
 			peers = append(peers, *client.peer)
 		}
 	}

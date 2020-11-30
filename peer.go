@@ -23,6 +23,7 @@ type Peer struct {
 	Connecting bool      `json:"-" gorm:"-"`
 	FailCount  int       `json:"-" gorm:"-"`
 	Acessible  bool      `json:"-"`
+	Direction  string    `json:"-" gorm:"-"`
 }
 
 func (p *Peer) verify(vID uuid.UUID) verifyRes {

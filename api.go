@@ -262,11 +262,13 @@ func (a *api) SocketHandler() http.Handler {
 								SealKey:   response.SealKey,
 								LastSeen:  time.Now(),
 								Acessible: false,
+								Direction: "in",
 							}
 							a.core.db.db.Create(&newPeer)
 							dbEntry = newPeer
 							log.Debug("Discovered peer: " + newPeer.toString(false))
 						} else {
+							dbEntry.Direction = "in"
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{SealKey: response.SealKey, LastSeen: time.Now()})
 						}
 						if dbEntry.online() {
