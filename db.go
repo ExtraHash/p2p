@@ -32,6 +32,7 @@ func (d *db) initialize(config NetworkConfig) error {
 		db.Where("sign_key = ?", seed.SignKey).Find(&dbEntry)
 
 		if dbEntry == (Peer{}) {
+			seed.Acessible = true
 			db.Create(&seed)
 		}
 	}
