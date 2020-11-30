@@ -76,7 +76,7 @@ func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bo
 			continue
 		}
 		fmt.Println(consumer.peer.SignKey)
-		if consumer.serverInfo.PubSealKey == pubKey {
+		if consumer.peer.SignKey == pubKey {
 			byteKey, err := hex.DecodeString(consumer.peer.SignKey)
 			if err != nil {
 				log.Error(err)
@@ -93,9 +93,9 @@ func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bo
 			byteCast, err := msgpack.Marshal(broadcast)
 			if err != nil {
 				log.Error(err)
-			} else {
-				consumer.send(byteCast)
+				return false
 			}
+			consumer.send(byteCast)
 			return true
 		}
 	}
