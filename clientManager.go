@@ -175,7 +175,7 @@ func (cm *clientManager) findPeers() {
 					if newPeer.online() {
 						newPeer.Acessible = true
 						cm.core.db.db.Create(&newPeer)
-						log.Debug("Discovered peer: " + newPeer.toString(false))
+						log.Debug("findPeers() Discovered peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
 					}
 				}
 			}
