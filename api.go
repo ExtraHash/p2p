@@ -35,9 +35,8 @@ func (a *api) getPeerList() []Peer {
 	peerList := []Peer{}
 
 	log.Info("Searching active connection list for peers:")
-
 	for _, conn := range a.ac {
-		log.Info(conn.dbEntry)
+		log.Infof("%+v\n", conn)
 		if conn.authed {
 			peerList = append(peerList, conn.dbEntry)
 		}
