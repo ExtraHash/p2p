@@ -19,6 +19,7 @@ type core struct {
 	db            db
 	keys          keys
 	messages      *chan []byte
+	whispers      *chan []byte
 	clientManager clientManager
 }
 
@@ -34,6 +35,8 @@ type NetworkConfig struct {
 func (d *DP2P) Initialize(config NetworkConfig) error {
 	messages := make(chan []byte)
 	d.core.messages = &messages
+	whispers := make(chan []byte)
+	d.core.whispers = &whispers
 	d.core.config = config
 
 	_, err := uuid.FromString(config.NetworkID)
@@ -82,6 +85,15 @@ func (d *DP2P) ReadMessage() []byte {
 		time.Sleep(100 * time.Millisecond)
 	}
 	return <-*d.core.messages
+}
+
+// ReadWhisper will get the next whispered (direct) message on the network. It blocks
+// until the message is ready to be read.
+func (d *DP2P) ReadWhisper() []byte {
+	for d.core.whispers == nil {
+		time.Sleep(100 * time.Millisecond)
+	}
+	return <-*d.core.whispers
 }
 
 // GetPeerList returns all peers you are currently connected to.

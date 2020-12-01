@@ -3,6 +3,7 @@ package p2p
 import (
 	"crypto/ed25519"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -117,7 +118,8 @@ func (client *client) listen() {
 			client.connecting = false
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, "Logged in to "+client.peer.toString(false))
 		case "broadcast":
-			client.parse(rawMessage)
+		case "whisper":
+			client.parse(rawMessage, msg.Type)
 		default:
 			log.Warning("unknown message type: " + msg.Type)
 		}
@@ -154,7 +156,7 @@ func (client *client) fail() {
 	client.authorized = false
 }
 
-func (client *client) parse(msg []byte) {
+func (client *client) parse(msg []byte, msgType string) {
 	client.readMu.Lock()
 	defer client.readMu.Unlock()
 
@@ -165,17 +167,28 @@ func (client *client) parse(msg []byte) {
 	if decrypted {
 		if !client.received.contains([]byte(broadcast.MessageID)) {
 			client.received.push([]byte(broadcast.MessageID))
-			log.Info(colors.boldMagenta+"CAST"+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
-			go client.emit(unsealed)
-			client.core.clientManager.propagate(unsealed, broadcast.MessageID)
+			log.Info(colors.boldMagenta+strings.ToUpper(msgType)+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
+			if msgType == "broadcast" {
+				go client.emit(unsealed)
+				client.core.clientManager.propagate(unsealed, broadcast.MessageID)
+			}
+			if msgType == "whisper" {
+				go client.emitWhisper(unsealed)
+			}
 		} else {
 			if client.core.config.LogLevel > 1 {
-				log.Info(colors.boldMagenta+"CAST"+colors.reset, broadcast.MessageID)
+				log.Info(colors.boldMagenta+strings.ToUpper(msgType)+colors.reset, broadcast.MessageID)
 			}
 		}
 	}
+
 }
 
+func (client *client) emitWhisper(data []byte) {
+	*client.core.whispers <- data
+}
+
+// this should probably go in client manager scope?
 func (client *client) emit(data []byte) {
 	*client.core.messages <- data
 }
