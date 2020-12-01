@@ -89,7 +89,12 @@ func (d *DP2P) GetPeerList() []Peer {
 	outPeers := d.core.clientManager.getPeerList()
 	inPeers := d.api.getPeerList()
 
+	log.Info("OUT", outPeers)
+	log.Info("IN", inPeers)
+
 	allPeers := deDupe(append(outPeers, inPeers...))
+
+	log.Info("ALL", allPeers)
 
 	return allPeers
 }
