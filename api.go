@@ -271,15 +271,15 @@ func (a *api) SocketHandler() http.Handler {
 								Direction: "in",
 							}
 							a.core.db.db.Create(&newPeer)
-							dbEntry = newPeer
 							log.Info("Api discovered new inbound peer: " + newPeer.toString(false) + " " + newPeer.SignKey)
 						} else {
-							dbEntry.Direction = "in"
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{LastSeen: time.Now()})
 						}
 						if dbEntry.online() {
 							a.core.db.db.Model(&Peer{}).Where("sign_key = ?", dbEntry.SignKey).Updates(Peer{Acessible: true})
 						}
+						dbEntry.Direction = "in"
+						ac.dbEntry = dbEntry
 					}
 				} else {
 					log.Warning("Client " + GetIP(req) + " invalid auth signature.")
