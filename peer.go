@@ -25,7 +25,7 @@ type Peer struct {
 }
 
 func (p *Peer) info() (infoRes, error) {
-	log.Notice("OUT", "GET", "/info", p.toString(false))
+	log.Notice(colors.boldYellow+"HTTP"+colors.reset, "OUT", "GET", "/info", p.toString(false))
 
 	httpClient := http.Client{
 		Timeout: 1 * time.Second,
@@ -49,7 +49,7 @@ func (p *Peer) info() (infoRes, error) {
 }
 
 func (p *Peer) peerList() ([]Peer, error) {
-	log.Notice("OUT", "GET", "/peers", p.toString(false))
+	log.Notice(colors.boldYellow+"HTTP"+colors.reset, "OUT", "GET", "/peers", p.toString(false))
 
 	httpClient := http.Client{
 		Timeout: 1 * time.Second,
@@ -80,6 +80,7 @@ func (p *Peer) toString(includePrefix bool) string {
 }
 
 func (p *Peer) online() bool {
+	log.Notice(colors.boldYellow+"HTTP"+colors.reset, "OUT", "GET", "/info", p.toString(false))
 	infoURL := url.URL{Scheme: "http", Host: p.toString(false), Path: "/info"}
 	httpClient := http.Client{
 		Timeout: 1 * time.Second,

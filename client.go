@@ -119,8 +119,6 @@ func (client *client) listen() {
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, "Logged in to "+client.peer.toString(false))
 		case "broadcast":
 			client.parse(rawMessage, msg.Type)
-		case "whisper":
-			client.parse(rawMessage, msg.Type)
 		default:
 			log.Warning("unknown message type: " + msg.Type)
 		}
