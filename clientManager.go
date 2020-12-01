@@ -131,8 +131,8 @@ func (cm *clientManager) findPeers() {
 			}
 
 			for _, unknownPeer := range peerKnownPeers {
-				if _, value := keys[peer.SignKey]; !value {
-					keys[peer.SignKey] = true
+				if _, value := keys[unknownPeer.SignKey]; !value {
+					keys[unknownPeer.SignKey] = true
 					if unknownPeer.online() {
 						peerInfo, err := unknownPeer.info()
 						if err != nil {
