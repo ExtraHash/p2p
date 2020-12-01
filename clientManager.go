@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"encoding/hex"
-	"fmt"
 	"sync"
 	"time"
 
@@ -47,44 +46,6 @@ func (cm *clientManager) getPeerList() []Peer {
 		}
 	}
 	return peers
-}
-
-func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bool {
-	if cm.clients == nil {
-		return false
-	}
-	for _, consumer := range *cm.clients {
-		if consumer == nil {
-			continue
-		}
-		if consumer.conn == nil {
-			continue
-		}
-		fmt.Println(consumer.peer.SignKey)
-		if consumer.peer.SignKey == pubKey {
-			byteKey, err := hex.DecodeString(consumer.serverInfo.PubSealKey)
-			if err != nil {
-				log.Error(err)
-				return false
-			}
-			nonce := makeNonce()
-			secret := box.Seal(nil, msg, nonce.bytes, keySliceConvert(byteKey), &cm.core.keys.sealKeys.Priv)
-			broadcast := broadcast{
-				Type:      "whisper",
-				Secret:    hex.EncodeToString(secret),
-				Nonce:     nonce.str,
-				MessageID: messageID,
-			}
-			byteCast, err := msgpack.Marshal(broadcast)
-			if err != nil {
-				log.Error(err)
-				return false
-			}
-			consumer.send(byteCast)
-			return true
-		}
-	}
-	return false
 }
 
 func (cm *clientManager) propagate(msg []byte, messageID string) {
