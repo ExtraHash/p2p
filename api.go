@@ -34,15 +34,13 @@ func (a *api) getPeerList() []Peer {
 
 	peerList := []Peer{}
 
-	log.Info("Searching active connection list for peers:")
 	for _, conn := range a.ac {
-		log.Infof("%+v\n", conn)
 		if conn.authed {
 			peerList = append(peerList, conn.dbEntry)
 		}
 	}
 
-	return []Peer{}
+	return peerList
 }
 
 func (a *api) whisper(msg []byte, pubKey string, messageID string) bool {
