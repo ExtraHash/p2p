@@ -98,7 +98,7 @@ func (a *api) PeerHandler() http.Handler {
 
 		switch req.Method {
 		case "GET":
-			peerList := a.core.db.getPeerList()
+			peerList := a.core.clientManager.getPeerList()
 			byteRes, err := json.Marshal(peerList)
 			if err != nil {
 				res.WriteHeader(http.StatusInternalServerError)
