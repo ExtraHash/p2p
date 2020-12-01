@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -192,6 +193,8 @@ func (a *api) SocketHandler() http.Handler {
 		a.acMu.Lock()
 		a.ac = append(a.ac, &ac)
 		a.acMu.Unlock()
+
+		fmt.Println(a.ac)
 
 		log.Info(colors.boldYellow+"HTTP"+colors.reset, "UPGRADED", GetIP(req))
 
