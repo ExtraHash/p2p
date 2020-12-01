@@ -151,6 +151,7 @@ func (cm *clientManager) findPeers() {
 				}
 			}
 		}
+		keys = make(map[string]bool)
 		time.Sleep(3 * time.Minute)
 	}
 
