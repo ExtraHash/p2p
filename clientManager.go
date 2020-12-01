@@ -123,27 +123,30 @@ func (cm *clientManager) propagate(msg []byte, messageID string) {
 func (cm *clientManager) findPeers() {
 	for {
 		peerList := cm.core.db.getPeerList()
+		keys := make(map[string]bool)
 		for _, peer := range peerList {
-
 			peerKnownPeers, err := peer.peerList()
 			if err != nil {
 				continue
 			}
 
 			for _, unknownPeer := range peerKnownPeers {
-				if unknownPeer.online() {
-					peerInfo, err := unknownPeer.info()
-					if err != nil {
-						continue
-					}
-					checkPeer := Peer{}
-					cm.core.db.db.Find(&checkPeer, "sign_key = ?", peerInfo.PubSignKey)
-					if checkPeer == (Peer{}) {
-						unknownPeer.Acessible = true
-						unknownPeer.SignKey = peerInfo.PubSignKey
-						unknownPeer.LastSeen = time.Now()
-						cm.core.db.db.Create(&unknownPeer)
-						log.Info("findPeers() Discovered peer: " + unknownPeer.toString(false) + " " + unknownPeer.SignKey)
+				if _, value := keys[peer.SignKey]; !value {
+					keys[peer.SignKey] = true
+					if unknownPeer.online() {
+						peerInfo, err := unknownPeer.info()
+						if err != nil {
+							continue
+						}
+						checkPeer := Peer{}
+						cm.core.db.db.Find(&checkPeer, "sign_key = ?", peerInfo.PubSignKey)
+						if checkPeer == (Peer{}) {
+							unknownPeer.Acessible = true
+							unknownPeer.SignKey = peerInfo.PubSignKey
+							unknownPeer.LastSeen = time.Now()
+							cm.core.db.db.Create(&unknownPeer)
+							log.Info("findPeers() Discovered peer: " + unknownPeer.toString(false) + " " + unknownPeer.SignKey)
+						}
 					}
 				}
 			}
