@@ -118,6 +118,7 @@ func (client *client) listen() {
 			client.connecting = false
 			log.Info(colors.boldGreen+"AUTH"+colors.reset, "Logged in to "+client.peer.toString(false))
 		case "broadcast":
+			client.parse(rawMessage, msg.Type)
 		case "whisper":
 			client.parse(rawMessage, msg.Type)
 		default:
