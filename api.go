@@ -288,45 +288,6 @@ func (a *api) SocketHandler() http.Handler {
 				ac.pong()
 			case "pong":
 				ac.alive = true
-			case "whisper":
-				if !ac.authed {
-					log.Warning("Peer attempted to whisper without being authed.")
-					break
-				}
-
-				broadcast := broadcast{}
-				err = msgpack.Unmarshal(data, &broadcast)
-
-				if err != nil {
-					log.Error(err)
-					break
-				}
-
-				crypt, err := hex.DecodeString(broadcast.Secret)
-				if err != nil {
-					log.Error(err)
-					break
-				}
-
-				nonceS, err := hex.DecodeString(broadcast.Nonce)
-				if err != nil {
-					log.Error(err)
-					break
-				}
-				var nonceA [24]byte
-				copy(nonceA[:], nonceS[:24])
-
-				var theirPublicKey [32]byte
-				copy(theirPublicKey[:], ac.sealKey[:32])
-
-				unsealed, success := box.Open(nil, crypt, &nonceA, &theirPublicKey, &a.core.keys.sealKeys.Priv)
-				if success {
-					if !a.serverReceived.contains([]byte(broadcast.MessageID)) {
-						a.emitWhisper(unsealed)
-					}
-				} else {
-					log.Warning("Decryption failed.")
-				}
 			case "broadcast":
 				if !ac.authed {
 					log.Warning("Peer attempted to use broadcast without being authed.")
@@ -373,10 +334,6 @@ func (a *api) SocketHandler() http.Handler {
 
 		}
 	})
-}
-
-func (a *api) emitWhisper(data []byte) {
-	*a.core.whispers <- data
 }
 
 func (a *api) removeConnection(connection *ActiveConnection) {

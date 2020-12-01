@@ -169,13 +169,8 @@ func (client *client) parse(msg []byte, msgType string) {
 		if !client.received.contains([]byte(broadcast.MessageID)) {
 			client.received.push([]byte(broadcast.MessageID))
 			log.Info(colors.boldMagenta+strings.ToUpper(msgType)+colors.reset, colors.boldYellow+"***"+colors.reset, broadcast.MessageID)
-			if msgType == "broadcast" {
-				go client.emit(unsealed)
-				client.core.clientManager.propagate(unsealed, broadcast.MessageID)
-			}
-			if msgType == "whisper" {
-				go client.emitWhisper(unsealed)
-			}
+			go client.emit(unsealed)
+			client.core.clientManager.propagate(unsealed, broadcast.MessageID)
 		} else {
 			if client.core.config.LogLevel > 1 {
 				log.Info(colors.boldMagenta+strings.ToUpper(msgType)+colors.reset, broadcast.MessageID)
@@ -183,10 +178,6 @@ func (client *client) parse(msg []byte, msgType string) {
 		}
 	}
 
-}
-
-func (client *client) emitWhisper(data []byte) {
-	*client.core.whispers <- data
 }
 
 // this should probably go in client manager scope?
