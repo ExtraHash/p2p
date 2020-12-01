@@ -27,7 +27,6 @@ func (cm *clientManager) initialize(core *core) {
 	go cm.takePeers()
 	go cm.findPeers()
 	go cm.pruneList()
-	go cm.logging()
 }
 
 func (cm *clientManager) getPeerList() []Peer {
@@ -48,26 +47,6 @@ func (cm *clientManager) getPeerList() []Peer {
 		}
 	}
 	return peers
-}
-
-func (cm *clientManager) logging() {
-	for {
-		time.Sleep(1 * time.Minute)
-		log.Debug("║ Current OUT:")
-		for _, client := range *cm.clients {
-			output := "║ " + client.toString()
-			if client.authorized {
-				output += " ✅  Ping: " + client.pingTime.String()
-			}
-			if client.failed {
-				output += " ❌"
-			}
-			if client.connecting {
-				output += " ⏳"
-			}
-			log.Debug(output)
-		}
-	}
 }
 
 func (cm *clientManager) whisper(msg []byte, pubKey string, messageID string) bool {
